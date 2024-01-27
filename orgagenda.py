@@ -12,7 +12,7 @@ import OrgExtended.orgutil.template as templateEngine
 import OrgExtended.orgduration as dur
 import logging
 import sys
-import traceback 
+import traceback
 import OrgExtended.orgfolding as folding
 import OrgExtended.orgdb as db
 import OrgExtended.orgdatepicker as dpick
@@ -243,7 +243,7 @@ def IsInMonth(n, now):
     return (None,None)
 
 def IsToday(n, today):
-    # 4 months of per day scheduling is the maximum 
+    # 4 months of per day scheduling is the maximum
     # we are willing to loop to avoid crazy slow loops.
     kMaxLoops = sets.GetInt("agendaMaxScheduledIterations", 120)
     timestamps = n.get_timestamps(active=True,point=True,range=True)
@@ -326,7 +326,7 @@ def IsInHourBracket(s, e, hour):
         # TODO Make this configurable
         e = s + datetime.timedelta(minutes=30)
     # Either this task is a ranged task OR it is a single point task
-    # Ranged tasks have to fit within the hour, point tasks have to 
+    # Ranged tasks have to fit within the hour, point tasks have to
     if( Overlaps(s.hour*60 + s.minute, e.hour*60 + e.minute, hour*60, hour*60 + 59)):
         return True
 
@@ -391,7 +391,7 @@ def IsInHourAndMinuteBracket(s,e,hour,mstart,mend):
         e = s + datetime.timedelta(minutes=30)
 
     # Either this task is a ranged task OR it is a single point task
-    # Ranged tasks have to fit within the hour, point tasks have to 
+    # Ranged tasks have to fit within the hour, point tasks have to
     if( Overlaps(s.hour*60 + s.minute, e.hour*60 + e.minute, hour*60 + mstart, hour*60 + mend)):
         return True
     return False
@@ -514,7 +514,7 @@ class AgendaBaseView:
                     self._beforeDuration.append(dur.OrgDuration.Parse(tagdata.strip()))
                 else:
                     self._afterDuration.append(dur.OrgDuration.Parse(tagdata.strip()))
-    
+
     def SetClockedDurationFilter(self,kwargs):
         self._beforeClockedDuration     = []
         self._afterClockedDuration      = []
@@ -692,7 +692,7 @@ class AgendaBaseView:
         if(self._oneofPriorityTags and len(self._oneofPriorityTags) > 0 and not any(elem in node.priority for elem in self._oneofPriorityTags)):
             return False
         return True
-    
+
     def MatchState(self, node):
         t = node.todo
         if(not node.todo):
@@ -821,7 +821,7 @@ class AgendaBaseView:
             entry['at'] = []
         entry['at'].append(self.view.rowcol(self.view.size())[0])
         entry['ts'] = ts
-    
+
     def MarkEntryAtRegion(self, entry, reg, ts=None):
         if(not 'at' in entry):
             entry['at'] = []
@@ -852,7 +852,7 @@ class AgendaBaseView:
 
     def FilterEntries(self):
         allowOutsideOrgDir = sets.Get("agendaIncludeFilesOutsideOrgDir", False)
-        for file in db.Get().Files: 
+        for file in db.Get().Files:
             # Skip over files not in orgDir
             if(not file.isOrgDir and not allowOutsideOrgDir):
                 continue
@@ -889,7 +889,7 @@ def IsAfterNow(ts, now):
     else:
         return False
 
-# ============================================================ 
+# ============================================================
 class CalendarView(AgendaBaseView):
     def __init__(self, name, setup=True,**kwargs):
         super(CalendarView, self).__init__(name, setup, **kwargs)
@@ -994,7 +994,7 @@ def getsortkey(a):
     return result
 
 
-# ============================================================ 
+# ============================================================
 class WeekView(AgendaBaseView):
     def __init__(self, name, setup=True,**kwargs):
         super(WeekView, self).__init__(name, setup, **kwargs)
@@ -1005,7 +1005,7 @@ class WeekView(AgendaBaseView):
         style = self.dayhighlight
         if(style == None):
             style = "orgdatepicker.monthheader"
-        self.output.add_regions("curweek",[reg],style,"",sublime.DRAW_NO_OUTLINE)   
+        self.output.add_regions("curweek",[reg],style,"",sublime.DRAW_NO_OUTLINE)
 
     def InsertTimeHeading(self, edit, hour):
         self.startOffset = 9
@@ -1035,7 +1035,7 @@ class WeekView(AgendaBaseView):
         e = self.view.text_point(row,col+2)
         reg = sublime.Region(s, e)
         style = "orgagenda.now"
-        self.view.add_regions("curw",[reg],style,"",sublime.DRAW_NO_OUTLINE)   
+        self.view.add_regions("curw",[reg],style,"",sublime.DRAW_NO_OUTLINE)
 
     def InsertDay(self, name, date, edit):
         pt = self.view.size()
@@ -1106,12 +1106,12 @@ class WeekView(AgendaBaseView):
                         style = "orgagenda.week.done." + str(doneMatchCount)
                         doneMatchCount = (doneMatchCount + 1) % 2
                         self.MarkEntryAtRegion(lastMatchEntry,reg)
-                        self.view.add_regions("week_done_" + str(date.day) + "_" + str(hour) + "_" + str(minSlot),[reg],style,"", sublime.DRAW_SQUIGGLY_UNDERLINE)   
+                        self.view.add_regions("week_done_" + str(date.day) + "_" + str(hour) + "_" + str(minSlot),[reg],style,"", sublime.DRAW_SQUIGGLY_UNDERLINE)
                     else:
                         style = "orgagenda.week." + str(matchCount)
                         matchCount = (matchCount + 1) % 10
                         self.MarkEntryAtRegion(lastMatchEntry,reg)
-                        self.view.add_regions("week_" + str(date.day) + "_" + str(hour) + "_" + str(minSlot),[reg],style,"",sublime.DRAW_NO_FILL)   
+                        self.view.add_regions("week_" + str(date.day) + "_" + str(hour) + "_" + str(minSlot),[reg],style,"",sublime.DRAW_NO_FILL)
                 if(match != None):
                     if(lastMatch != match):
                         lastMatch      = match
@@ -1152,7 +1152,7 @@ class WeekView(AgendaBaseView):
         return rc
 
 
-# ============================================================ 
+# ============================================================
 class AgendaView(AgendaBaseView):
     def __init__(self, name, setup=True, **kwargs):
         super(AgendaView, self).__init__(name, setup, **kwargs)
@@ -1169,7 +1169,7 @@ class AgendaView(AgendaBaseView):
             #OrgDateRepeatedTask
             repeats = n.repeated_tasks
             habitbar = "[_____________________]"
-            hb = list(habitbar) 
+            hb = list(habitbar)
             # not schedule but done
             # not schedule not done
             # scheduled but not done
@@ -1471,14 +1471,14 @@ class TodoView(AgendaBaseView):
             if n:
                 dt = getdatefromnode(n)
                 if dt != datetime.datetime.min and dt.date() != datetime.date.min:
-                    date = dt.strftime("%Y-%m-%d %a")  
+                    date = dt.strftime("%Y-%m-%d %a")
             data['date'] = date
         if self.showtime:
             time = ""
             if n:
                 dt = getdatefromnode(n)
                 if dt != datetime.datetime.min and dt.time() != datetime.time.min:
-                    time = dt.time().strftime("%H:%M")  
+                    time = dt.time().strftime("%H:%M")
             data['time'] = time
         if self.showeffort:
             effort = ""
@@ -1702,7 +1702,7 @@ class NextTasksProjectsView(TodoView):
                     #self.RenderEntry(c, filename, edit)
         for e in newEntries:
             self.entries.append(e)
-                    
+
     def FilterEntry(self, n, filename):
         return IsProject(n) and not IsBlockedProject(n) and not IsArchived(n)
 
@@ -1756,7 +1756,7 @@ class CompositeViewListener(sublime_plugin.ViewEventListener):
 
     def on_hover_done(self):
         self.clear_phantoms()
-    
+
     def on_hover(self, point, hover_zone):
         if(not hasattr(self,'agenda') or self.agenda == None):
             return
@@ -1797,10 +1797,10 @@ class CompositeViewListener(sublime_plugin.ViewEventListener):
                 """.format(n.heading,f.filename)
 
                 self.view.add_phantom(n.heading, reg, body, sublime.LAYOUT_INLINE)
-                #sublime.Phantom(sublime.Region(point, point), "<html><body>" + n.heading + "</body></html>",sublime.LAYOUT_INLINE, None) 
+                #sublime.Phantom(sublime.Region(point, point), "<html><body>" + n.heading + "</body></html>",sublime.LAYOUT_INLINE, None)
                 self.phantoms.append(n.heading)
                 print(n.heading)
-                sublime.set_timeout(self.on_hover_done, 1000*2) 
+                sublime.set_timeout(self.on_hover_done, 1000*2)
 
 # ================================================================================
 # ORG has this custom composite view feature.
