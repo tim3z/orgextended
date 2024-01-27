@@ -1287,9 +1287,16 @@ class AgendaView(AgendaBaseView):
         self.RenderDateHeading(edit, self.now)
         view     = self.view
         dayStart = sets.Get("agendaDayStartTime",6)
-        dayEnd   = sets.Get("agendaDayEndTime",19)  
+        dayEnd   = sets.Get("agendaDayEndTime",19)
         allDat = []
         before = True
+        for entry in self.entries:
+            n = entry['node']
+            filename = entry['file'].AgendaFilenameTag()
+            ts = IsAllDay(n,self.now)
+            if(ts):
+                self.MarkEntryAt(entry,ts)
+                view.insert(edit, view.size(), "{0:12} {1} {2:69} {3} {4}\n".format(filename, n.todo if n.todo else "", n.heading, self.BuildDeadlineDisplay(n), self.BuildHabitDisplay(n)))
         for h in range(dayStart, dayEnd):
             didNotInsert = True
             if(self.now.hour == h):
@@ -1360,13 +1367,6 @@ class AgendaView(AgendaBaseView):
                     esep = "]"
                 view.insert(edit, view.size(), "{0:12} {1:02d}:00{3}{2}{4}---------------------\n".format(empty, h, blocks, sep, esep))
         view.insert(edit,view.size(),"\n")
-        for entry in self.entries:
-            n = entry['node']
-            filename = entry['file'].AgendaFilenameTag()
-            ts = IsAllDay(n,self.now)
-            if(ts):
-                self.MarkEntryAt(entry,ts)
-                view.insert(edit, view.size(), "{0:12} {1} {2:69} {3} {4}\n".format(filename, n.todo if n.todo else "", n.heading, self.BuildDeadlineDisplay(n), self.BuildHabitDisplay(n)))
 
     def FilterEntry(self, node, file):
         rc = (not self.onlyTasks or IsTodo(node)) and not IsDone(node) and not IsArchived(node) and IsToday(node, self.now)
