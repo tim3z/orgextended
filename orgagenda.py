@@ -145,6 +145,11 @@ def HasChildTasks(n):
             return True
     return False
 
+def HasTodoAncestor(n):
+    if(not n or n.is_root()):
+        return False
+    return (n.parent and not n.parent.is_root() and (IsTodo(n.parent) or HasTodoAncestor(n.parent)))
+
 # Task that belongs to a project. This means we have to have a parent and that parent has to be
 # identified as a project.
 def IsProjectTask(n):
@@ -471,6 +476,8 @@ class AgendaBaseView:
         self.onlyTasks  = "onlytasks" in kwargs
         self.haschildtasks = "haschildtasks" in kwargs
         self.nochildtasks = "nochildtasks" in kwargs
+        self.hastodoancestor = "hastodoancestor" in kwargs
+        self.notodoancestor = "notodoancestor" in kwargs
 
         if(setup):
             self.SetupView()
@@ -648,6 +655,8 @@ class AgendaBaseView:
             return False
         if(self.haschildtasks and not HasChildTasks(node)):
             return False
+        if(self.hastodoancestor and not HasTodoAncestor(node)):
+            return False
         if(self.noclock and node.clock):
             return False
         if(self.nodeadline and node.deadline):
@@ -657,6 +666,8 @@ class AgendaBaseView:
         if(self.noschedule and node.scheduled):
             return False
         if(self.nochildtasks and HasChildTasks(node)):
+            return False
+        if(self.notodoancestor and HasTodoAncestor(node)):
             return False
         return True
 
