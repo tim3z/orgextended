@@ -136,22 +136,23 @@ contexts:
         1: markup.raw.block orgmode.table.block
       scope: orgmode.table
       # DEADLINE: <DATETIME>
-    - match: "(DEADLINE:)\\s+({{datetime}})"
+    - match: "{{datetime}}"
+      scope: orgmode.datetime
+    - match: "{{unscheddatetime}}"
+      scope: orgmode.unscheddatetime
+    - match: "(DEADLINE:)\\s*({{datetime}})"
       captures:
         1: keyword orgmode.statekeyword
-        2: markup.italic orgmode.datetime
       scope: orgmode.deadline
       # SCHEDULED: <DATETIME>
-    - match: "(SCHEDULED:)\\s+({{datetime}})"
+    - match: "(SCHEDULED:)\\s*({{datetime}})"
       captures:
         1: keyword orgmode.statekeyword
-        2: markup.italic orgmode.datetime
       scope: orgmode.scheduled
       # CLOSED: [DATETIME]
-    - match: "(CLOSED:)\\s+({{unscheddatetime}})"
+    - match: "(CLOSED:)\\s*({{unscheddatetime}})"
       captures:
         1: keyword orgmode.statekeyword
-        2: markup.italic orgmode.unscheddatetime
       scope: orgmode.closed
       # numbered list
     - match: "^\\s*([0-9]+[.)])\\s+(([^:]+\\s+)(::))?"
