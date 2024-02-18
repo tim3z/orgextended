@@ -266,6 +266,5 @@ def move_cursor_to(self, view):
 
 @add_method(node.OrgBaseNode)
 def indent(self):
-    level = self.level
-    return (" " + (" " * level))
+    return ""
 
