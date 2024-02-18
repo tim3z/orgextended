@@ -143,16 +143,19 @@ contexts:
     - match: "(DEADLINE:)\\s*({{datetime}})"
       captures:
         1: keyword orgmode.statekeyword
+        2: orgmode.datetime
       scope: orgmode.deadline
       # SCHEDULED: <DATETIME>
     - match: "(SCHEDULED:)\\s*({{datetime}})"
       captures:
         1: keyword orgmode.statekeyword
+        2: orgmode.datetime
       scope: orgmode.scheduled
       # CLOSED: [DATETIME]
     - match: "(CLOSED:)\\s*({{unscheddatetime}})"
       captures:
         1: keyword orgmode.statekeyword
+        2: orgmode.unscheddatetime
       scope: orgmode.closed
       # numbered list
     - match: "^\\s*([0-9]+[.)])\\s+(([^:]+\\s+)(::))?"
