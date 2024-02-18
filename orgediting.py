@@ -720,53 +720,41 @@ class OrgBaseTimestampCommand(sublime_plugin.TextCommand):
         self.prefix = prefix
 
     def insert(self, date):
-        if(date):
-            self.view.Insert(self.view.sel()[0].begin(), OrgDate.format_clock(date.start, active=True))
-        else:
-            self.view.Erase(self.reg)
-        self.view.sel().clear()
-        self.view.sel().add(self.oldsel)
+        if(not date):
+            return
+
+        # TODO: Find scheduled and replace it as well.
+        pt = self.view.text_point(self.node.start_row,0)
+        l = self.view.line(pt)
+        # Last row handling If we are the last row we can't jump over the newline we have to add one.
+        if(self.view.isBeyondLastRow(self.node.start_row+1)):
+            self.view.Insert(l.end(), "\n")
+
+        self.view.Insert(l.end() + 1, self.node.indent() + self.prefix + OrgDate.format_date(date.start, active=True) + "\n")
 
     def run(self, edit, dateval=None):
+        self.node = db.Get().AtInView(self.view)
+        if(not self.node or self.node.is_root()):
+            return
+
         if(type(dateval) == str):
             dateval = orgdate.OrgDateFreeFloating.from_str(dateval)
-        # TODO: Find scheduled and replace it as well.
-        node = db.Get().AtInView(self.view)
-        if(node and not node.is_root()):
-            self.oldsel = self.view.sel()[0]
-            pt = self.view.text_point(node.start_row,0)
-            l = self.view.line(pt)
-            # Last row handling If we are the last row we can't jump over the newline
-            # we have to add one.
-            nl = ""
-            addnl = 1
-            if(self.view.isBeyondLastRow(node.start_row+1)):
-                nl = "\n"
-                addnl = 0
-            insertpt = l.end() + addnl
-            endpt = insertpt + len(nl) + len(node.indent()) + len(self.prefix)
-            self.reg = sublime.Region(insertpt, endpt)
-            self.view.insert(edit, insertpt, nl + node.indent() + self.prefix)
-            pt = self.view.text_point(node.start_row+1,0)
-            l = self.view.line(pt)
-            self.view.sel().clear()
-            self.view.sel().add(l.end())
-            if(dateval == None):
-                datep.Pick(evt.Make(self.insert))
-            else:
-                self.insert(dateval)
+            self.insert(dateval)
+        else:
+            datep.Pick(evt.Make(self.insert))
+
 
 class OrgScheduleCommand(OrgBaseTimestampCommand):
     def __init__(self,unknown=None):
-        super(OrgScheduleCommand, self).__init__(unknown,"SCHEDULED:  \n")
+        super(OrgScheduleCommand, self).__init__(unknown,"SCHEDULED: ")
 
 class OrgDeadlineCommand(OrgBaseTimestampCommand):
     def __init__(self,unknown=None):
-        super(OrgDeadlineCommand, self).__init__(unknown,"DEADLINE:  \n")
+        super(OrgDeadlineCommand, self).__init__(unknown,"DEADLINE: ")
 
 class OrgActiveTimestampCommand(OrgBaseTimestampCommand):
     def __init__(self,unknown=None):
-        super(OrgActiveTimestampCommand, self).__init__(unknown,"  \n")
+        super(OrgActiveTimestampCommand, self).__init__(unknown,"")
 
 class OrgInsertClosedCommand(sublime_plugin.TextCommand):
     def run(self, edit):
