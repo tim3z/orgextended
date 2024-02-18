@@ -261,7 +261,7 @@ class DateView:
 
 class DatePicker:
 	def __init__(self,firstDayIndex=0):
-		self.dateView = DateView(None, firstDayIndex, True)
+		self.dateView = DateView(None, firstDayIndex, False)
 		self.months = []
 
 	def on_done(self, text):
