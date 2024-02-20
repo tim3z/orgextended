@@ -2018,6 +2018,7 @@ class OrgAgendaCustomViewCommand(sublime_plugin.TextCommand):
         agenda.DoRenderView(edit)
         #if(self.view.name() == "Agenda"):
         agenda.RestoreCursor(pos)
+        agenda.view.run_command("org_agenda_refresh")
         log.info("Custom view refreshed")
         evt.EmitIf(onDone)
 
@@ -2173,6 +2174,14 @@ class OrgAgendaGotoPrevDayCommand(sublime_plugin.TextCommand):
         agenda = FindMappedView(self.view)
         now = agenda.now
         now = now + datetime.timedelta(days=-1)
+        agenda.UpdateNow(now)
+        agenda.Clear(edit)
+        agenda.DoRenderView(edit)
+
+class OrgAgendaRefreshCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        agenda = FindMappedView(self.view)
+        now = agenda.now
         agenda.UpdateNow(now)
         agenda.Clear(edit)
         agenda.DoRenderView(edit)
