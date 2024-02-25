@@ -273,7 +273,7 @@ def IsToday(n, today):
         else:
             return n.scheduled.after(today)
     if(n.deadline):
-        start = EnsureDateTime(n.deadline.deadline_start)
+        start = EnsureDateTime(display_deadline_start(n.deadline))
         if start <= today:
             return n.deadline
         if(n.deadline.repeating):
@@ -308,7 +308,7 @@ def IsAllDay(n,today):
             if(not n.scheduled.has_end() and not n.scheduled.has_time()):
                 return n.scheduled
     if(n.deadline):
-        dt = n.deadline.deadline_start
+        dt = display_deadline_start(n.deadline)
         if(isinstance(dt,datetime.date)):
             return True
         if(dt.hour == 0 and dt.minute == 0 and dt.second == 0 and dt.microsecond == 0):
@@ -438,6 +438,12 @@ def distanceFromStart(e, hour, minSlot):
     else:
         rv = 5*(hour - ts.start.hour) + (minSlot - int(ts.start.minute/12))
     return rv
+
+def display_deadline_start(deadline_date):
+    prewarn_duration = datetime.timedelta(days=14)
+    if(deadline_date.warning):
+        prewarn_duration = deadline_date.warn_rule
+    return deadline_date.start - prewarn_duration
 
 # ================================================================================
 # IDEA Make a base class that has all the functionality needed to
@@ -1067,7 +1073,7 @@ class WeekView(AgendaBaseView):
                 daydata.append(entry)
                 entry['ts'] = n.scheduled
                 continue
-            if(n.deadline and (EnsureDate(n.deadline.deadline_start) < EnsureDate(date) and not IsDone(n) and not IsArchived(n) or EnsureDate(n.deadline.deadline_start) == EnsureDate(date))):
+            if(n.deadline and (EnsureDate(display_deadline_start(n.deadline)) < EnsureDate(date) and not IsDone(n) and not IsArchived(n) or EnsureDate(display_deadline_start(n.deadline)) == EnsureDate(date))):
                 daydata.append(entry)
                 entry['ts'] = n.deadline
                 continue
@@ -1271,7 +1277,7 @@ class AgendaView(AgendaBaseView):
 
     def BuildDeadlineDisplay(self, node):
         if(node.deadline):
-            if(EnsureDateTime(node.deadline.deadline_start) <= self.now):
+            if(EnsureDateTime(display_deadline_start(node.deadline)) <= self.now):
                 if(EnsureDateTime(node.deadline.start).date() < self.now.date()):
                     return "D: Overdue"
                 elif(EnsureDateTime(node.deadline.start).date() == self.now.date()):

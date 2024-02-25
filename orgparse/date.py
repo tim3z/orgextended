@@ -440,12 +440,6 @@ class OrgDate(object):
         return self.repeat_rule.after(now,inc=False) 
 
     @property
-    def deadline_start(self):
-        if(not self.warning):
-            self.warn_rule = datetime.timedelta(days=1)
-        return self.start - self.warn_rule
-
-    @property
     def start(self):
         """
         Get date or datetime object
