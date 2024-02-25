@@ -462,7 +462,7 @@ def display_deadline_start(deadline_date):
 # priorityfilter
 class AgendaBaseView:
     def __init__(self, name, setup=True, **kwargs):
-        self.name = name
+        self.name = kwargs.get("title", name)
         self.SetTagFilter(kwargs)
         self.SetPriorityFilter(kwargs)
         self.SetStateFilter(kwargs)
