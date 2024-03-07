@@ -671,8 +671,6 @@ class OrgCaptureCommand(OrgCaptureBaseCommand):
         # panel.meta_info("shellVariables", 0)[0]['TM_EMAIL'] = "Trying to set email value"
         self.panel.run_command('_enter_insert_mode', {"count": 1, "mode": "mode_internal_normal"})
         now = datetime.datetime.now()
-        inow = orgdate.OrgDate.format_date(now, False)
-        anow = orgdate.OrgDate.format_date(now, True)
         # "Packages/OrgExtended/orgsnippets/"+snippet+".sublime-snippet"
         # OTHER VARIABLES:
         # TM_FULLNAME - Users full name
@@ -682,8 +680,10 @@ class OrgCaptureCommand(OrgCaptureBaseCommand):
         # TM_CURRENT_LINE - Line of snippet when snippet was triggered
         self.panel.run_command("insert_snippet", {
             "name": snipName,
-            "ORG_INACTIVE_DATE": inow,
-            "ORG_ACTIVE_DATE":   anow,
+            "ORG_INACTIVE_DATE":     orgdate.OrgDate.format_date(now, False),
+            "ORG_INACTIVE_DATETIME": orgdate.OrgDate.format_clock(now, False),
+            "ORG_ACTIVE_DATE":       orgdate.OrgDate.format_date(now, True),
+            "ORG_ACTIVE_DATETIME":   orgdate.OrgDate.format_clock(now, True),
             "ORG_DATE":          str(datetime.date.today()),
             "ORG_TIME":          datetime.datetime.now().strftime("%H:%M:%S"),
             "ORG_CLIPBOARD":     sublime.get_clipboard(),
