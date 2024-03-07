@@ -1,0 +1,10 @@
+<snippet>
+    <content><![CDATA[
+#+CREATED: $ORG_INACTIVE_DATETIME
+* ${1:HEADING}
+$0
+]]></content>
+    <tabTrigger>note_file</tabTrigger>
+    <scope>text.orgmode</scope>
+    <description>Note File</description>
+</snippet>
