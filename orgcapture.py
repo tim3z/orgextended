@@ -29,23 +29,24 @@ def GetViewById(id):
     return None
 
 
-def GetDict():
-    tempDict = {
+def GetDict(overrides = {}):
+    temp_values = {
+        'root': sets.Get('orgRootDir', ''),
         'refile': sets.Get('refile', ''),
         'daypage': daypage.dayPageGetName(daypage.dayPageGetToday()),
     }
-    return tempDict
-
+    temp_values.update(overrides)
+    return temp_values
 
 def GetCaptureFile(view, template, target):
     # temp = templateEngine.TemplateFormatter(sets.Get)
-    filename = templateEngine.ExpandTemplate(view, target[1], GetDict(), sets.Get)[0]
+    filename = templateEngine.ExpandTemplate(view, target[1], GetDict(template.get('overrides', {})), sets.Get)[0]
     return filename
 
 
 def GetCaptureFileAndParam(view, template, target):
     # temp = templateEngine.TemplateFormatter(sets.Get)
-    tempDict = GetDict()
+    tempDict = GetDict(template.get('overrides', {}))
     filename = templateEngine.ExpandTemplate(view, target[1], tempDict, sets.Get)[0]
     headline = None
     if (len(target) > 2):
@@ -63,7 +64,7 @@ def FindNodeByPath(n, target, idx):
 
 
 def GetCapturePath(view, template):
-    target    = ['file', '{refile}']
+    target = ['file', '{refile}']
     if 'target' in template:
         target    = template['target']
     filename = None
@@ -703,11 +704,21 @@ class OrgCaptureCommand(OrgCaptureBaseCommand):
         captureBufferName = sets.Get("captureBufferName", captureBufferName)
         window = self.view.window()
         template = self.templates[index]
-        target, capturePath, captureFile, at, toinsert = GetCapturePath(self.view, template)
-        openas = False
-        if ('openas' in template and 'direct' == template['openas']):
-            panel = window.open_file(capturePath)
-            openas = True
+        template['overrides'] = template.get('overrides', {})
+
+        def execute_capture(overrides = {}):
+            template['overrides'].update(overrides)
+            target, capturePath, captureFile, at, toinsert = GetCapturePath(self.view, template)
+            openas = False
+            if ('openas' in template and 'direct' == template['openas']):
+                panel = window.open_file(capturePath)
+                openas = True
+            else:
+                panel = window.create_output_panel("orgcapture")
+            self.on_panel_ready(index, openas, panel)
+
+        if 'target' in template and '{prompt}' in template['target'][1]:
+            self.view.window().show_input_panel("Name", "", lambda name: execute_capture({ 'prompt': name }), lambda *args: None, lambda *args: None)
         else:
-            panel = window.create_output_panel("orgcapture")
-        self.on_panel_ready(index, openas, panel)
+            execute_capture()
+
