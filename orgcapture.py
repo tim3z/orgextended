@@ -473,32 +473,6 @@ class OrgRefileToFileAndHeadlineCommand(sublime_plugin.TextCommand):
         else:
             self.view.window().show_quick_panel(headings, self.on_done_st4, -1, -1)
 
-
-class OrgCaptureBaseCommand(sublime_plugin.TextCommand):
-    def on_done(self, index):
-        pass
-
-    def on_done_base_st3(self, index):
-        if (index < 0):
-            return
-        self.templates         = sets.Get("captureTemplates", [])
-        self.on_done(index)
-
-    def on_done_base_st4(self, index, modifiers):
-        self.on_done_base_st3(index)
-
-    def run(self, edit):
-        templates = sets.Get("captureTemplates", [])
-        temps = []
-        for temp in templates:
-            log.debug("TEMPLATE: ", temp)
-            temps.append(temp['name'])
-        if (int(sublime.version()) >= 4096):
-            self.view.window().show_quick_panel(temps, self.on_done_base_st4, -1, -1)
-        else:
-            self.view.window().show_quick_panel(temps, self.on_done_base_st3, -1, -1)
-
-
 def IsType(val, template):
     return 'type' in template and template['type'].strip() == val
 
@@ -513,7 +487,11 @@ def GetProp(template, name, defaultVal=None):
 
 
 # Capture some text into our refile org file
-class OrgCaptureCommand(OrgCaptureBaseCommand):
+class OrgCaptureCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        self.templates = sets.Get("captureTemplates", [])
+        self.view.window().show_quick_panel([t['name'] for t in self.templates], self.on_done, -1, -1)
+
     def insert_template(self, template, panel):
         # template          = templates[index]['template']
         startPos = -1
@@ -689,13 +667,10 @@ class OrgCaptureCommand(OrgCaptureBaseCommand):
             "ORG_CLIPBOARD":     sublime.get_clipboard(),
             "ORG_SELECTION":     self.view.substr(self.view.sel()[0]),
             "ORG_LINENUM":       str(self.view.curRow()),
-            "ORG_FILENAME":      self.view.file_name()
+            "ORG_FILENAME":      self.view.file_name(),
         })
         sublime.active_window().active_view().settings().set('auto_indent', ai)
         self.cleanup_capture_panel()
-
-    def on_done_st4(self, index, modifiers):
-        self.on_done(index)
 
     def on_done(self, index):
         if (index < 0):
