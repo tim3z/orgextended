@@ -488,9 +488,15 @@ def GetProp(template, name, defaultVal=None):
 
 # Capture some text into our refile org file
 class OrgCaptureCommand(sublime_plugin.TextCommand):
-    def run(self, edit):
+    def run(self, edit, **kwargs):
         self.templates = sets.Get("captureTemplates", [])
-        self.view.window().show_quick_panel([t['name'] for t in self.templates], self.on_done, -1, -1)
+        self.extra_snippet_variables = kwargs.get("snippet_variables", {})
+        if "template" in kwargs:
+            for idx, template in enumerate(self.templates):
+                if kwargs["template"] == template['name']:
+                    self.on_done(idx)
+                    return
+        self.view.window().show_quick_panel([t['name'] for t in self.templates], self.on_done)
 
     def insert_template(self, template, panel):
         # template          = templates[index]['template']
@@ -656,7 +662,7 @@ class OrgCaptureCommand(sublime_plugin.TextCommand):
         # TM_CURRENT_WORD - Word under cursor when snippet was triggered
         # TM_SELECTED_TEXT - Selected text when snippet was triggered
         # TM_CURRENT_LINE - Line of snippet when snippet was triggered
-        self.panel.run_command("insert_snippet", {
+        snippet_vars = {
             "name": snipName,
             "ORG_INACTIVE_DATE":     orgdate.OrgDate.format_date(now, False),
             "ORG_INACTIVE_DATETIME": orgdate.OrgDate.format_clock(now, False),
@@ -668,7 +674,9 @@ class OrgCaptureCommand(sublime_plugin.TextCommand):
             "ORG_SELECTION":     self.view.substr(self.view.sel()[0]),
             "ORG_LINENUM":       str(self.view.curRow()),
             "ORG_FILENAME":      self.view.file_name(),
-        })
+        }
+        snippet_vars.update(self.extra_snippet_variables)
+        self.panel.run_command("insert_snippet", snippet_vars)
         sublime.active_window().active_view().settings().set('auto_indent', ai)
         self.cleanup_capture_panel()
 
