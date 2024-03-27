@@ -744,9 +744,10 @@ class OrgBaseTimestampCommand(sublime_plugin.TextCommand):
         else:
             date_str += "\n"
 
-        self.view.ReplaceRegion(region, date_str)
+        self.view.ReplaceRegion(region, date_str, onDone=self.on_done)
 
-    def run(self, edit, dateval=None):
+    def run(self, edit, dateval=None, onDone=None):
+        self.on_done = onDone
         self.node = db.Get().AtInView(self.view)
         if(not self.node or self.node.is_root()):
             return

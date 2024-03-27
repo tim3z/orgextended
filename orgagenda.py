@@ -2091,6 +2091,18 @@ class OrgAgendaChangePriorityCommand(sublime_plugin.TextCommand):
         self.ed.Run()
 
 # ================================================================================
+class OrgAgendaScheduleCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        self.ed = RunEditingCommandOnNode(self.view,"org_schedule")
+        self.ed.Run()
+
+# ================================================================================
+class OrgAgendaDeadlineCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        self.ed = RunEditingCommandOnNode(self.view,"org_deadline")
+        self.ed.Run()
+
+# ================================================================================
 class OrgAgendaClockInCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         self.ed = RunEditingCommandOnNode(self.view,"org_clock_in")
