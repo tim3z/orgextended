@@ -706,17 +706,21 @@ def compile_sdc_re(sdctype):
         r'^(?!\#).*{0}:\s+{1}'.format(
             sdctype,
             gene_timestamp_regex(brtype, prefix='', nocookie=True)),
-        re.VERBOSE)
+        re.VERBOSE | re.MULTILINE)
 
 
 class OrgDateSDCBase(OrgDate):
 
     _re = None  # override this!
 
+    @classmethod
+    def search(cls, string):
+        return cls._re.search(string)
+
     # FIXME: use OrgDate.from_str
     @classmethod
     def from_str(cls, string):
-        match = cls._re.search(string)
+        match = cls.search(string)
         if match:
             mdict = match.groupdict()
             start = cls._datetuple_from_groupdict(mdict)

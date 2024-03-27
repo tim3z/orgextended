@@ -715,22 +715,36 @@ class OrgInsertDateActiveCommand(sublime_plugin.TextCommand):
 
 
 class OrgBaseTimestampCommand(sublime_plugin.TextCommand):
-    def __init__(self,unknown=None, prefix=None):
+    def __init__(self,unknown=None, prefix=None, date_cls=None):
         super(OrgBaseTimestampCommand, self).__init__(unknown)
         self.prefix = prefix
+        self.date_cls = date_cls
+
+    def node_date(self):
+        return OrgDate(None)
 
     def insert(self, date):
         if(not date):
             return
+        date_str = self.node.indent() + self.prefix + OrgDate.format_date(date.start, active=True)
 
-        # TODO: Find scheduled and replace it as well.
         pt = self.view.text_point(self.node.start_row,0)
         l = self.view.line(pt)
         # Last row handling If we are the last row we can't jump over the newline we have to add one.
         if(self.view.isBeyondLastRow(self.node.start_row+1)):
             self.view.Insert(l.end(), "\n")
+        region = sublime.Region(l.end() + 1, l.end() + 1)
 
-        self.view.Insert(l.end() + 1, self.node.indent() + self.prefix + OrgDate.format_date(date.start, active=True) + "\n")
+        if self.node_date() != OrgDate(None):
+            start_pt = self.view.text_point(self.node.start_row, 0)
+            end_pt = self.view.text_point(self.node.end_row, 0)
+            content = self.view.substr(self.view.line(sublime.Region(start_pt, end_pt)))
+            match = self.date_cls.search(content)
+            region = sublime.Region(start_pt + match.start(), start_pt + match.end())
+        else:
+            date_str += "\n"
+
+        self.view.ReplaceRegion(region, date_str)
 
     def run(self, edit, dateval=None):
         self.node = db.Get().AtInView(self.view)
@@ -746,11 +760,17 @@ class OrgBaseTimestampCommand(sublime_plugin.TextCommand):
 
 class OrgScheduleCommand(OrgBaseTimestampCommand):
     def __init__(self,unknown=None):
-        super(OrgScheduleCommand, self).__init__(unknown,"SCHEDULED: ")
+        super(OrgScheduleCommand, self).__init__(unknown, "SCHEDULED: ", orgdate.OrgDateScheduled)
+
+    def node_date(self):
+        return self.node.scheduled
 
 class OrgDeadlineCommand(OrgBaseTimestampCommand):
     def __init__(self,unknown=None):
-        super(OrgDeadlineCommand, self).__init__(unknown,"DEADLINE: ")
+        super(OrgDeadlineCommand, self).__init__(unknown, "DEADLINE: ", orgdate.OrgDateDeadline)
+
+    def node_date(self):
+        return self.node.deadline
 
 class OrgActiveTimestampCommand(OrgBaseTimestampCommand):
     def __init__(self,unknown=None):
