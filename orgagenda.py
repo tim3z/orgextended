@@ -999,6 +999,8 @@ def getsortkey(a):
         result += 3
     return result
 
+def truncate_date_from_filename(filename):
+    return filename[11:] if re.match(r"\A\d\d\d\d-\d\d-\d\d_", filename) else filename
 
 # ============================================================
 class WeekView(AgendaBaseView):
@@ -1269,11 +1271,19 @@ class AgendaView(AgendaBaseView):
         return out
 
     def RenderAgendaEntry(self,edit,filename,n,h,ts):
-        view = self.view
-        if(IsRawDate(ts)):
-            view.insert(edit, view.size(), "{0:12} {1:02d}:{2:02d}B[{7}] {3} {4:45} {5}{6}\n".format(filename if (len(filename) <= 12) else filename[:11] + ":" , h, ts.minute, n.todo if n.todo else "", n.heading, self.BuildDeadlineDisplay(n), self.BuildHabitDisplay(n), self.GetAgendaBlocks(n,h)))
-        else:
-            view.insert(edit, view.size(), "{0:12} {1:02d}:{2:02d}B[{7}] {3} {4:45} {5}{6}\n".format(filename if (len(filename) <= 12) else filename[:11] + ":" , h, ts.start.minute, n.todo if n.todo else "", n.heading, self.BuildDeadlineDisplay(n), self.BuildHabitDisplay(n), self.GetAgendaBlocks(n,h)))
+        start_minute = ts.minute if IsRawDate(ts) else ts.start.minute
+        todo_state = n.todo or ""
+        heading = todo_state + " " + n.heading
+        file = truncate_date_from_filename(filename)
+        entry = "{0:12} {1:02d}:{2:02d}B[{6}] {3:32} {4}{5}\n".format(file[:12], h, start_minute, heading[:32], self.BuildDeadlineDisplay(n), self.BuildHabitDisplay(n), self.GetAgendaBlocks(n,h))
+        self.view.insert(edit, self.view.size(), entry)
+
+    def RenderAgendaAllDayEntry(self, edit, filename, n):
+        todo_state = n.todo or ""
+        heading = todo_state + " " + n.heading
+        file = truncate_date_from_filename(filename)
+        entry = "{0:12} {1:48} {2} {3}\n".format(file, heading[:48], self.BuildDeadlineDisplay(n), self.BuildHabitDisplay(n))
+        self.view.insert(edit, self.view.size(), entry)
 
     def BuildDeadlineDisplay(self, node):
         if(node.deadline):
@@ -1302,7 +1312,7 @@ class AgendaView(AgendaBaseView):
             ts = IsAllDay(n,self.now)
             if(ts):
                 self.MarkEntryAt(entry,ts)
-                view.insert(edit, view.size(), "{0:12} {1} {2:69} {3} {4}\n".format(filename, n.todo if n.todo else "", n.heading, self.BuildDeadlineDisplay(n), self.BuildHabitDisplay(n)))
+                self.RenderAgendaAllDayEntry(edit, filename, n)
         for h in range(dayStart, dayEnd):
             didNotInsert = True
             if(self.now.hour == h):
