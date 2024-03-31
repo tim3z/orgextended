@@ -496,7 +496,7 @@ class AgendaBaseView:
         pass
 
     def BasicSetup(self):
-        self.UpdateNow()
+        self.InitializeSelectedDate()
         self.entries = []
 
     def SetDurationFilter(self,kwargs):
@@ -793,13 +793,13 @@ class AgendaBaseView:
         else:
             self.view.insert(edit, self.view.size(), self.name + "\n")
 
-    def UpdateNow(self, now=None):
-        if(now == None):
-            self.now = datetime.datetime.now()
-        else:
-            self.now = now
-            self.entries = []
-            self.FilterEntries()
+    def InitializeSelectedDate(self):
+        self.selected_date = datetime.datetime.now()
+
+    def UpdateSelectedDate(self, date):
+        self.selected_date = date
+        self.entries = []
+        self.FilterEntries()
 
     # You have to bookend your editing session with these
     def StartEditing(self):
@@ -902,12 +902,9 @@ class CalendarView(AgendaBaseView):
         firstDayIndex = sets.GetWeekdayIndexByName(sets.Get("firstDayOfWeek","Sunday"))
         self.dv = dpick.DateView("orgagenda.now",firstDayIndex = firstDayIndex)
 
-    def UpdateNow(self, now=None):
-        if(now == None):
-            self.now = datetime.datetime.now()
-        else:
-            self.now = now
-            self.dv.MoveCDateToDate(self.now)
+    def UpdateSelectedDate(self, date):
+        self.selected_date = date
+        self.dv.MoveCDateToDate(self.selected_date)
 
     def AddRepeating(self, date):
         self.dv.AddToDayHighlights(date, "repeat", "orgagenda.blocked")
@@ -920,11 +917,11 @@ class CalendarView(AgendaBaseView):
     def RenderView(self, edit, clear=False):
         self.InsertAgendaHeading(edit)
         self.dv.SetView(self.view)
-        self.dv.Render(self.now)
+        self.dv.Render(self.selected_date)
         toHighlight = []
         for entry in self.entries:
             n = entry['node']
-            ts, repeating = IsInMonth(n, self.now)
+            ts, repeating = IsInMonth(n, self.selected_date)
             if(ts):
                 self.AddTodo(ts)
             if(ts and repeating):
@@ -1049,11 +1046,11 @@ class WeekView(AgendaBaseView):
         pt = self.view.size()
         row, c = self.view.rowcol(pt)
         if(date.day == datetime.datetime.now().day):
-            if(date.day == self.now.day):
+            if(date.day == self.selected_date.day):
                 self.view.insert(edit, self.view.size(),"@" + name + " " + "{0:2}".format(date.day) + "W[")
             else:
                 self.view.insert(edit, self.view.size(),"#" + name + " " + "{0:2}".format(date.day) + "W[")
-        elif(date.day == self.now.day):
+        elif(date.day == self.selected_date.day):
             self.view.insert(edit, self.view.size(),"&" + name + " " + "{0:2}".format(date.day) + "W[")
         else:
             self.view.insert(edit, self.view.size()," " + name + " " + "{0:2}".format(date.day) + "W[")
@@ -1144,11 +1141,11 @@ class WeekView(AgendaBaseView):
 
     def RenderView(self, edit, clear=False):
         self.InsertAgendaHeading(edit)
-        self.InsertTimeHeading(edit,self.now.hour)
-        #print(str(self.now))
-        wday   = self.now.weekday()
+        self.InsertTimeHeading(edit,self.selected_date.hour)
+        #print(str(self.selected_date))
+        wday   = self.selected_date.weekday()
         firstDayIndex = sets.GetWeekdayIndexByName(sets.Get("firstDayOfWeek", "Sunday"))
-        wstart = self.now + datetime.timedelta(days=firstDayIndex-wday)
+        wstart = self.selected_date + datetime.timedelta(days=firstDayIndex-wday)
         dayNames  = sets.Get("weekViewDayNames",["Mon", "Tue", "Wed", "Thr", "Fri", "Sat", "Sun"])
         numDays   = sets.Get("agendaWeekViewNumDays",7)
         for i in range(0,numDays):
@@ -1185,12 +1182,12 @@ class AgendaView(AgendaBaseView):
             # late
             # done
             if(repeats):
-                start = self.now-drel.relativedelta(days=20)
-                cur = self.now-drel.relativedelta(days=21)
-                while(cur < self.now):
+                start = self.selected_date-drel.relativedelta(days=20)
+                cur = self.selected_date-drel.relativedelta(days=21)
+                while(cur < self.selected_date):
                    cur = n.scheduled.next_repeat_from(cur)
-                   if(cur < self.now):
-                        diff = (self.now - cur).days
+                   if(cur < self.selected_date):
+                        diff = (self.selected_date - cur).days
                         diff = 21 - diff
                         hb[diff] = '.'
                 for i in range(0,21):
@@ -1230,7 +1227,7 @@ class AgendaView(AgendaBaseView):
     def ClearAgendaBlocks(self,h):
         for i in range(0, len(self.blocks)):
             n = self.blocks[i]
-            if(not IsInHour(n, h,self.now)):
+            if(not IsInHour(n, h,self.selected_date)):
                 self.ReleaseSymbol(i)
                 self.blocks[i] = None
 
@@ -1287,10 +1284,10 @@ class AgendaView(AgendaBaseView):
 
     def BuildDeadlineDisplay(self, node):
         if(node.deadline):
-            if(EnsureDateTime(display_deadline_start(node.deadline)) <= self.now):
-                if(EnsureDateTime(node.deadline.start).date() < self.now.date()):
+            if(EnsureDateTime(display_deadline_start(node.deadline)) <= self.selected_date):
+                if(EnsureDateTime(node.deadline.start).date() < self.selected_date.date()):
                     return "D: Overdue"
-                elif(EnsureDateTime(node.deadline.start).date() == self.now.date()):
+                elif(EnsureDateTime(node.deadline.start).date() == self.selected_date.date()):
                     return "D: Due Today"
                 else:
                     return "D:@" + str(EnsureDateTime(node.deadline.start).date())
@@ -1300,7 +1297,7 @@ class AgendaView(AgendaBaseView):
 
     def RenderView(self, edit, clear=False):
         self.InsertAgendaHeading(edit)
-        self.RenderDateHeading(edit, self.now)
+        self.RenderDateHeading(edit, self.selected_date)
         view     = self.view
         dayStart = sets.Get("agendaDayStartTime",6)
         dayEnd   = sets.Get("agendaDayEndTime",19)
@@ -1309,19 +1306,19 @@ class AgendaView(AgendaBaseView):
         for entry in self.entries:
             n = entry['node']
             filename = entry['file'].AgendaFilenameTag()
-            ts = IsAllDay(n,self.now)
+            ts = IsAllDay(n,self.selected_date)
             if(ts):
                 self.MarkEntryAt(entry,ts)
                 self.RenderAgendaAllDayEntry(edit, filename, n)
         for h in range(dayStart, dayEnd):
             didNotInsert = True
-            if(self.now.hour == h):
+            if(self.selected_date.hour == h):
                 foundItems = []
                 for entry in self.entries:
                     n = entry['node']
                     #filename = entry['file'].AgendaFilenameTag()
-                    ts = IsInHour(n, h, self.now)
-                    if(IsBeforeNow(ts, self.now) and ts):
+                    ts = IsInHour(n, h, self.selected_date)
+                    if(IsBeforeNow(ts, self.selected_date) and ts):
                         entry['ts'] = ts
                         if(not 'found' in entry):
                             foundItems.append(entry)
@@ -1337,13 +1334,13 @@ class AgendaView(AgendaBaseView):
                         self.MarkEntryAt(it,ts)
                         self.RenderAgendaEntry(edit,filename,n,h,ts)
                         didNotInsert = False
-                view.insert(edit, view.size(), "{0:12} {1:02d}:{2:02d} - - - - - - - - - - - - - - - - - - - - - \n".format("now =>", self.now.hour, self.now.minute) )
+                view.insert(edit, view.size(), "{0:12} {1:02d}:{2:02d} - - - - - - - - - - - - - - - - - - - - - \n".format("now =>", self.selected_date.hour, self.selected_date.minute) )
                 foundItems = []
                 for entry in self.entries:
                     n = entry['node']
                     #filename = entry['file'].AgendaFilenameTag()
-                    ts = IsInHour(n, h, self.now)
-                    if(IsAfterNow(ts, self.now) and ts):
+                    ts = IsInHour(n, h, self.selected_date)
+                    if(IsAfterNow(ts, self.selected_date) and ts):
                         entry['ts'] = ts
                         if(not 'found' in entry or entry['found'] == 'b'):
                             foundItems.append(entry)
@@ -1364,7 +1361,7 @@ class AgendaView(AgendaBaseView):
                 for entry in self.entries:
                     n = entry['node']
                     filename = entry['file'].AgendaFilenameTag()
-                    ts = IsInHour(n,h,self.now)
+                    ts = IsInHour(n,h,self.selected_date)
                     if(ts and (not 'found' in entry or (not before and entry['found'] == 'b'))):
                         if(before):
                             entry['found'] = 'b'
@@ -1385,7 +1382,7 @@ class AgendaView(AgendaBaseView):
         view.insert(edit,view.size(),"\n")
 
     def FilterEntry(self, node, file):
-        rc = (not self.onlyTasks or IsTodo(node)) and not IsDone(node) and not IsArchived(node) and IsToday(node, self.now)
+        rc = (not self.onlyTasks or IsTodo(node)) and not IsDone(node) and not IsArchived(node) and IsToday(node, self.selected_date)
         return rc
 
 RE_IN_OUT_TAG = re.compile('(?P<inout>[|+-])?(?P<tag>[^ ]+)')
@@ -1840,13 +1837,15 @@ class CompositeView(AgendaBaseView):
         for v in self.agendaViews:
             self.entries += v.entries
 
-    def UpdateNow(self, now=None):
-        if(now == None):
-            self.now = datetime.datetime.now()
-        else:
-            self.now = now
+    def InitializeSelectedDate(self):
+        AgendaBaseView.InitializeSelectedDate(self)
         for v in self.agendaViews:
-            v.UpdateNow(now)
+            v.InitializeSelectedDate()
+
+    def UpdateSelectedDate(self, date):
+        self.selected_date = date
+        for v in self.agendaViews:
+            v.UpdateSelectedDate(date)
 
     def FilterEntries(self):
         self.entries = []
@@ -2190,9 +2189,9 @@ class OrgTagFilteredTodoViewCommand(sublime_plugin.TextCommand):
 class OrgAgendaGotoNextDayCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         agenda = FindMappedView(self.view)
-        now = agenda.now
-        now = now + datetime.timedelta(days=1)
-        agenda.UpdateNow(now)
+        date = agenda.selected_date
+        date = date + datetime.timedelta(days=1)
+        agenda.UpdateSelectedDate(date)
         agenda.Clear(edit)
         agenda.DoRenderView(edit)
 
@@ -2200,16 +2199,16 @@ class OrgAgendaGotoNextDayCommand(sublime_plugin.TextCommand):
 class OrgAgendaGotoPrevDayCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         agenda = FindMappedView(self.view)
-        now = agenda.now
-        now = now + datetime.timedelta(days=-1)
-        agenda.UpdateNow(now)
+        date = agenda.selected_date
+        date = date + datetime.timedelta(days=-1)
+        agenda.UpdateSelectedDate(date)
         agenda.Clear(edit)
         agenda.DoRenderView(edit)
 
 class OrgAgendaRefreshCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         agenda = FindMappedView(self.view)
-        now = agenda.now
-        agenda.UpdateNow(now)
+        date = agenda.selected_date
+        agenda.UpdateSelectedDate(date)
         agenda.Clear(edit)
         agenda.DoRenderView(edit)
