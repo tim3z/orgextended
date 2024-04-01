@@ -248,7 +248,7 @@ def IsToday(n, today):
     kMaxLoops = sets.GetInt("agendaMaxScheduledIterations", 120)
     timestamps = n.get_timestamps(active=True,point=True,range=True)
     for t in timestamps:
-        if(t.repeating):
+        if t.repeating:
             if(IsTodaysDate(t.start, today)):
                 return t
             next = EnsureDateTime(t.start)
@@ -261,8 +261,8 @@ def IsToday(n, today):
         else:
             if(t.has_overlap(today)):
                 return t
-    if(n.scheduled):
-        if(n.scheduled.repeating):
+    if n.scheduled:
+        if n.scheduled.repeating:
             next = n.scheduled.start
             loopcount = 0
             while(EnsureDateTime(next) <= EnsureDateTime(today) and loopcount <= kMaxLoops):
@@ -272,11 +272,11 @@ def IsToday(n, today):
                 loopcount += 1
         else:
             return n.scheduled.after(today)
-    if(n.deadline):
+    if n.deadline:
         start = EnsureDateTime(display_deadline_start(n.deadline))
         if start <= today:
             return n.deadline
-        if(n.deadline.repeating):
+        if n.deadline.repeating:
             next = n.deadline.start
             loopcount = 0
             while(EnsureDateTime(next) <= EnsureDateTime(today) and loopcount <= kMaxLoops):
@@ -286,32 +286,32 @@ def IsToday(n, today):
                 loopcount += 1
     return None
 
-def IsAllDay(n,today):
-    if(not n):
+def IsAllDay(n, today):
+    if not n:
         return None
-    timestamps = n.get_timestamps(active=True,point=True,range=True)
+    timestamps = n.get_timestamps(active=True, point=True, range=True)
     for t in timestamps:
-        if(t.repeating):
+        if t.repeating:
             dt = t.next_repeat_from(today)
-            if(dt.hour == 0 and dt.minute == 0 and dt.second == 0 and dt.microsecond == 0):
+            if dt.hour == 0 and dt.minute == 0 and dt.second == 0 and dt.microsecond == 0:
                 return dt
         else:
             if(t.has_end() or t.has_time()):
                 continue
             return t
-    if(n.scheduled):
-        if(n.scheduled.repeating):
+    if n.scheduled:
+        if n.scheduled.repeating:
             dt = n.scheduled.next_repeat_from(today)
-            if(dt.hour == 0 and dt.minute == 0 and dt.second == 0 and dt.microsecond == 0):
+            if dt.hour == 0 and dt.minute == 0 and dt.second == 0 and dt.microsecond == 0:
                 return n.scheduled
         else:
-            if(not n.scheduled.has_end() and not n.scheduled.has_time()):
+            if not n.scheduled.has_end() and not n.scheduled.has_time():
                 return n.scheduled
-    if(n.deadline):
+    if n.deadline:
         dt = display_deadline_start(n.deadline)
-        if(isinstance(dt,datetime.date)):
+        if isinstance(dt, datetime.date):
             return True
-        if(dt.hour == 0 and dt.minute == 0 and dt.second == 0 and dt.microsecond == 0):
+        if dt.hour == 0 and dt.minute == 0 and dt.second == 0 and dt.microsecond == 0:
             return today
     return None
 
@@ -441,7 +441,7 @@ def distanceFromStart(e, hour, minSlot):
 
 def display_deadline_start(deadline_date):
     prewarn_duration = datetime.timedelta(days=14)
-    if(deadline_date.warning):
+    if deadline_date.warning:
         prewarn_duration = deadline_date.warn_rule
     return deadline_date.start - prewarn_duration
 
@@ -1307,8 +1307,8 @@ class AgendaView(AgendaBaseView):
         for entry in self.entries:
             n = entry['node']
             filename = entry['file'].AgendaFilenameTag()
-            ts = IsAllDay(n,self.selected_date)
-            if(ts):
+            ts = IsAllDay(n, self.selected_date)
+            if ts:
                 self.MarkEntryAt(entry,ts)
                 self.RenderAgendaAllDayEntry(edit, filename, n)
         for h in range(dayStart, dayEnd):
