@@ -308,7 +308,7 @@ def IsAllDay(n, today):
             if dt.hour == 0 and dt.minute == 0 and dt.second == 0 and dt.microsecond == 0:
                 return n.scheduled
         else:
-            if not n.scheduled.has_end() and not n.scheduled.has_time():
+            if (not n.scheduled.has_end() and not n.scheduled.has_time()) or n.scheduled.after(today):
                 return n.scheduled
     if n.deadline:
         dt = display_deadline_start(n.deadline)
@@ -1286,7 +1286,7 @@ class AgendaView(AgendaBaseView):
         self.view.insert(edit, self.view.size(), entry)
 
     def BuildDeadlineDisplay(self, node):
-        if(node.deadline):
+        if node.deadline:
             if(EnsureDateTime(display_deadline_start(node.deadline)) <= self.selected_date):
                 if(EnsureDateTime(node.deadline.start).date() < self.selected_date.date()):
                     return "D: Overdue"
@@ -1294,8 +1294,7 @@ class AgendaView(AgendaBaseView):
                     return "D: Due Today"
                 else:
                     return "D:@" + str(EnsureDateTime(node.deadline.start).date())
-        else:
-            return ""
+        return ""
 
 
     def RenderView(self, edit, clear=False):
@@ -1312,7 +1311,8 @@ class AgendaView(AgendaBaseView):
             filename = entry['file'].AgendaFilenameTag()
             ts = IsAllDay(n, self.selected_date)
             if ts:
-                self.MarkEntryAt(entry,ts)
+                entry['found'] = 'f'
+                self.MarkEntryAt(entry, ts)
                 self.RenderAgendaAllDayEntry(edit, filename, n)
         for h in range(dayStart, dayEnd):
             didNotInsert = True
