@@ -243,6 +243,7 @@ def IsInMonth(n, now):
     return (None,None)
 
 def IsOnDate(n, date):
+    today = datetime.datetime.now()
     # 4 months of per day scheduling is the maximum
     # we are willing to loop to avoid crazy slow loops.
     kMaxLoops = sets.GetInt("agendaMaxScheduledIterations", 120)
@@ -271,7 +272,9 @@ def IsOnDate(n, date):
                 next = n.scheduled.next_repeat_from(EnsureDateTime(next))
                 loopcount += 1
         else:
-            return n.scheduled.after(date)
+            schedule_start = EnsureDateTime(n.scheduled.start)
+            if DatesEqual(date, schedule_start) or (schedule_start < today and DatesEqual(date, today)):
+                return today
     if n.deadline:
         start = EnsureDateTime(display_deadline_start(n.deadline))
         if start <= date:
