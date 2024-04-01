@@ -1316,46 +1316,36 @@ class AgendaView(AgendaBaseView):
                 foundItems = []
                 for entry in self.entries:
                     n = entry['node']
-                    #filename = entry['file'].AgendaFilenameTag()
                     ts = IsInHour(n, h, self.selected_date)
                     if(IsBeforeNow(ts, self.selected_date) and ts):
                         entry['ts'] = ts
                         if(not 'found' in entry):
                             foundItems.append(entry)
                             entry['found'] = 'b'
-                if(len(foundItems) > 0):
-                    foundItems.sort(key=bystartnodedatekey)
-                    for it in foundItems:
-                        n = it['node']
-                        ts = it['ts']
-                        if(ts == None):
-                            ts = n.scheduled
-                        filename = it['file'].AgendaFilenameTag()
-                        self.MarkEntryAt(it,ts)
-                        self.RenderAgendaEntry(edit,filename,n,h,ts)
-                        didNotInsert = False
+                foundItems.sort(key=bystartnodedatekey)
+                for it in foundItems:
+                    n = it['node']
+                    ts = it['ts'] or n.scheduled
+                    self.MarkEntryAt(it, ts)
+                    self.RenderAgendaEntry(edit, it['file'].AgendaFilenameTag(), n, h, ts)
+                    didNotInsert = False
                 view.insert(edit, view.size(), "{0:12} {1:02d}:{2:02d} - - - - - - - - - - - - - - - - - - - - - \n".format("now =>", self.selected_date.hour, self.selected_date.minute) )
                 foundItems = []
                 for entry in self.entries:
                     n = entry['node']
-                    #filename = entry['file'].AgendaFilenameTag()
                     ts = IsInHour(n, h, self.selected_date)
                     if(IsAfterNow(ts, self.selected_date) and ts):
                         entry['ts'] = ts
                         if(not 'found' in entry or entry['found'] == 'b'):
                             foundItems.append(entry)
                             entry['found'] = 'a'
-                if(len(foundItems) > 0):
-                    foundItems.sort(key=bystartnodedatekey)
-                    for it in foundItems:
-                        n = it['node']
-                        ts = it['ts']
-                        if(ts == None):
-                            ts = n.scheduled
-                        filename = it['file'].AgendaFilenameTag()
-                        self.MarkEntryAt(it,ts)
-                        self.RenderAgendaEntry(edit,filename,n,h,ts)
-                        didNotInsert = False
+                foundItems.sort(key=bystartnodedatekey)
+                for it in foundItems:
+                    n = it['node']
+                    ts = it['ts'] or n.scheduled
+                    self.MarkEntryAt(it, ts)
+                    self.RenderAgendaEntry(edit, it['file'].AgendaFilenameTag(), n, h, ts)
+                    didNotInsert = False
                 before = False
             else:
                 for entry in self.entries:
@@ -1382,8 +1372,7 @@ class AgendaView(AgendaBaseView):
         view.insert(edit,view.size(),"\n")
 
     def FilterEntry(self, node, file):
-        rc = (not self.onlyTasks or IsTodo(node)) and not IsDone(node) and not IsArchived(node) and IsToday(node, self.selected_date)
-        return rc
+        return (not self.onlyTasks or IsTodo(node)) and not IsDone(node) and not IsArchived(node) and IsToday(node, self.selected_date)
 
 RE_IN_OUT_TAG = re.compile('(?P<inout>[|+-])?(?P<tag>[^ ]+)')
 # ================================================================================
