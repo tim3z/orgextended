@@ -197,12 +197,12 @@ def IsProject(n):
         return IsProjectTaskWithProjectProperty(n)
     return IsProjectTodoWithTodos(n)
 
-def IsTodaysDate(check, today):
-    if(not type(check) == datetime.date):
-        check = check.date()
-    if(not type(today) == datetime.date):
-        today = today.date()
-    return today == check
+def DatesEqual(a, b):
+    if not type(a) == datetime.date:
+        a = a.date()
+    if not type(b) == datetime.date:
+        b = b.date()
+    return a == b
 
 def IsInMonthCheck(t, now):
     if(IsRawDate(t)):
@@ -242,45 +242,45 @@ def IsInMonth(n, now):
                 return (n.scheduled.start,n.scheduled.repeating)
     return (None,None)
 
-def IsToday(n, today):
+def IsOnDate(n, date):
     # 4 months of per day scheduling is the maximum
     # we are willing to loop to avoid crazy slow loops.
     kMaxLoops = sets.GetInt("agendaMaxScheduledIterations", 120)
     timestamps = n.get_timestamps(active=True,point=True,range=True)
     for t in timestamps:
         if t.repeating:
-            if(IsTodaysDate(t.start, today)):
+            if(DatesEqual(t.start, date)):
                 return t
             next = EnsureDateTime(t.start)
             loopcount = 0
-            while(next <= EnsureDateTime(today) and loopcount <= kMaxLoops):
-                if IsTodaysDate(next, today):
+            while(next <= EnsureDateTime(date) and loopcount <= kMaxLoops):
+                if DatesEqual(next, date):
                     return next
                 next = t.next_repeat_from(next)
                 loopcount += 1
         else:
-            if(t.has_overlap(today)):
+            if(t.has_overlap(date)):
                 return t
     if n.scheduled:
         if n.scheduled.repeating:
             next = n.scheduled.start
             loopcount = 0
-            while(EnsureDateTime(next) <= EnsureDateTime(today) and loopcount <= kMaxLoops):
-                if IsTodaysDate(next, today):
+            while(EnsureDateTime(next) <= EnsureDateTime(date) and loopcount <= kMaxLoops):
+                if DatesEqual(next, date):
                     return next
                 next = n.scheduled.next_repeat_from(EnsureDateTime(next))
                 loopcount += 1
         else:
-            return n.scheduled.after(today)
+            return n.scheduled.after(date)
     if n.deadline:
         start = EnsureDateTime(display_deadline_start(n.deadline))
-        if start <= today:
+        if start <= date:
             return n.deadline
         if n.deadline.repeating:
             next = n.deadline.start
             loopcount = 0
-            while(EnsureDateTime(next) <= EnsureDateTime(today) and loopcount <= kMaxLoops):
-                if IsTodaysDate(next, today):
+            while(EnsureDateTime(next) <= EnsureDateTime(date) and loopcount <= kMaxLoops):
+                if DatesEqual(next, date):
                     return next
                 next = n.deadline.next_repeat_from(EnsureDateTime(next))
                 loopcount += 1
@@ -1370,7 +1370,7 @@ class AgendaView(AgendaBaseView):
         view.insert(edit,view.size(),"\n")
 
     def FilterEntry(self, node, file):
-        return (not self.onlyTasks or IsTodo(node)) and not IsDone(node) and not IsArchived(node) and IsToday(node, self.selected_date)
+        return (not self.onlyTasks or IsTodo(node)) and not IsDone(node) and not IsArchived(node) and IsOnDate(node, self.selected_date)
 
 RE_IN_OUT_TAG = re.compile('(?P<inout>[|+-])?(?P<tag>[^ ]+)')
 # ================================================================================
