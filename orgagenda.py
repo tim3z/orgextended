@@ -1303,6 +1303,7 @@ class AgendaView(AgendaBaseView):
         dayEnd   = sets.Get("agendaDayEndTime",19)
         allDat = []
         before = True
+        now = datetime.datetime.now()
         for entry in self.entries:
             n = entry['node']
             filename = entry['file'].AgendaFilenameTag()
@@ -1312,12 +1313,12 @@ class AgendaView(AgendaBaseView):
                 self.RenderAgendaAllDayEntry(edit, filename, n)
         for h in range(dayStart, dayEnd):
             didNotInsert = True
-            if(self.selected_date.hour == h):
+            if self.selected_date.date() == now.date() and now.hour == h:
                 foundItems = []
                 for entry in self.entries:
                     n = entry['node']
                     ts = IsInHour(n, h, self.selected_date)
-                    if(IsBeforeNow(ts, self.selected_date) and ts):
+                    if(IsBeforeNow(ts, now) and ts):
                         entry['ts'] = ts
                         if(not 'found' in entry):
                             foundItems.append(entry)
@@ -1329,12 +1330,12 @@ class AgendaView(AgendaBaseView):
                     self.MarkEntryAt(it, ts)
                     self.RenderAgendaEntry(edit, it['file'].AgendaFilenameTag(), n, h, ts)
                     didNotInsert = False
-                view.insert(edit, view.size(), "{0:12} {1:02d}:{2:02d} - - - - - - - - - - - - - - - - - - - - - \n".format("now =>", self.selected_date.hour, self.selected_date.minute) )
+                view.insert(edit, view.size(), "{0:12} {1:02d}:{2:02d} - - - - - - - - - - - - - - - - - - - - - \n".format("now =>", now.hour, now.minute) )
                 foundItems = []
                 for entry in self.entries:
                     n = entry['node']
                     ts = IsInHour(n, h, self.selected_date)
-                    if(IsAfterNow(ts, self.selected_date) and ts):
+                    if(IsAfterNow(ts, now) and ts):
                         entry['ts'] = ts
                         if(not 'found' in entry or entry['found'] == 'b'):
                             foundItems.append(entry)
