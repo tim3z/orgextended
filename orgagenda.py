@@ -1318,9 +1318,9 @@ class AgendaView(AgendaBaseView):
                 for entry in self.entries:
                     n = entry['node']
                     ts = IsInHour(n, h, self.selected_date)
-                    if(IsBeforeNow(ts, now) and ts):
+                    if IsBeforeNow(ts, now) and ts:
                         entry['ts'] = ts
-                        if(not 'found' in entry):
+                        if not 'found' in entry:
                             foundItems.append(entry)
                             entry['found'] = 'b'
                 foundItems.sort(key=bystartnodedatekey)
@@ -1335,9 +1335,9 @@ class AgendaView(AgendaBaseView):
                 for entry in self.entries:
                     n = entry['node']
                     ts = IsInHour(n, h, self.selected_date)
-                    if(IsAfterNow(ts, now) and ts):
+                    if IsAfterNow(ts, now) and ts:
                         entry['ts'] = ts
-                        if(not 'found' in entry or entry['found'] == 'b'):
+                        if not 'found' in entry or entry['found'] == 'b':
                             foundItems.append(entry)
                             entry['found'] = 'a'
                 foundItems.sort(key=bystartnodedatekey)
@@ -1353,11 +1353,8 @@ class AgendaView(AgendaBaseView):
                     n = entry['node']
                     filename = entry['file'].AgendaFilenameTag()
                     ts = IsInHour(n,h,self.selected_date)
-                    if(ts and (not 'found' in entry or (not before and entry['found'] == 'b'))):
-                        if(before):
-                            entry['found'] = 'b'
-                        else:
-                            entry['found'] = 'a'
+                    if ts and (not 'found' in entry or (not before and entry['found'] == 'b')):
+                        entry['found'] = 'b' if before else 'a'
                         self.MarkEntryAt(entry, ts)
                         self.RenderAgendaEntry(edit,filename,n,h,ts)
                         didNotInsert = False
