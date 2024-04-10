@@ -1246,25 +1246,23 @@ class AgendaView(AgendaBaseView):
             out = ".."
         for i in range(0, len(self.blocks)):
             if not self.blocks[i]:
-                out = out + spaceSym
+                out += spaceSym
             else:
                 symIdx = self.FindSymbol(i)
-                out = out + self.sym[symIdx]
+                out += self.sym[symIdx]
         return out
 
     def RenderAgendaEntry(self,edit,filename,n,h,ts):
         start_minute = ts.minute if IsRawDate(ts) else ts.start.minute
-        todo_state = n.todo or ""
-        heading = todo_state + " " + n.heading
+        heading = n.todo + " " + n.heading if n.todo else n.heading
         file = truncate_date_from_filename(filename)
         entry = "{0:12} {1:02d}:{2:02d}B[{6}] {3:32} {4}{5}\n".format(file[:12], h, start_minute, heading[:32], self.BuildDeadlineDisplay(n), self.BuildHabitDisplay(n), self.GetAgendaBlocks(n,h))
         self.view.insert(edit, self.view.size(), entry)
 
     def RenderAgendaAllDayEntry(self, edit, filename, n):
-        todo_state = n.todo or ""
-        heading = todo_state + " " + n.heading
+        heading = n.todo + " " + n.heading if n.todo else n.heading
         file = truncate_date_from_filename(filename)
-        entry = "{0:12} {1:48} {2} {3}\n".format(file, heading[:48], self.BuildDeadlineDisplay(n), self.BuildHabitDisplay(n))
+        entry = "{0:12}                 {1:48} {2} {3}\n".format(file, heading[:48], self.BuildDeadlineDisplay(n), self.BuildHabitDisplay(n))
         self.view.insert(edit, self.view.size(), entry)
 
     def BuildDeadlineDisplay(self, node):
@@ -1343,15 +1341,15 @@ class AgendaView(AgendaBaseView):
                         self.MarkEntryAt(entry, ts)
                         self.RenderAgendaEntry(edit,filename,n,h,ts)
                         didNotInsert = False
-            if(didNotInsert):
+            if didNotInsert:
                 empty = " " * 12
                 blocks = self.GetAgendaBlocks(None,h)
-                sep = ""
+                sep = "."
                 esep = " "
-                if(not '.' in blocks):
+                if not '.' in blocks:
                     sep = "B["
-                    esep = "]"
-                view.insert(edit, view.size(), "{0:12} {1:02d}:00{3}{2}{4}---------------------\n".format(empty, h, blocks, sep, esep))
+                    esep = "] "
+                view.insert(edit, view.size(), "{0:12} {1:02d}:00{3}{2}{4}--------------------\n".format(empty, h, blocks, sep, esep))
         view.insert(edit,view.size(),"\n")
 
     def FilterEntry(self, node, file):
