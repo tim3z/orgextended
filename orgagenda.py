@@ -325,32 +325,32 @@ def HasTimestamp(n):
     return n.scheduled or (timestamps and len(timestamps) > 0) or n.deadline
 
 def IsInHourBracket(s, e, hour):
-    if(not e):
+    if not e:
         # TODO Make this configurable
         e = s + datetime.timedelta(minutes=30)
     # Either this task is a ranged task OR it is a single point task
     # Ranged tasks have to fit within the hour, point tasks have to
-    if( Overlaps(s.hour*60 + s.minute, e.hour*60 + e.minute, hour*60, hour*60 + 59)):
+    if Overlaps(s.hour*60 + s.minute, e.hour*60 + e.minute, hour*60, (hour+1)*60):
         return True
 
 
 def IsInHour(n, hour, today):
-    if(not n):
+    if not n:
         return None
     timestamps = n.get_timestamps(active=True, point=True,range=True)
-    if(timestamps):
+    if timestamps:
         for t in timestamps:
-            if(t.has_time()):
-                if(t.repeating):
+            if t.has_time():
+                if t.repeating:
                     next = t.next_repeat_from(today)
                     if(next.hour == hour):
                         return next
                 else:
                     s = t.start
                     e = t.end
-                    if(IsInHourBracket(s,e,hour)):
+                    if IsInHourBracket(s,e,hour):
                         return t
-    if(n.scheduled and n.scheduled.has_time()):
+    if n.scheduled and n.scheduled.has_time():
         if(n.scheduled.repeating):
             next = n.scheduled.next_repeat_from(today)
             if next.hour == hour:
@@ -359,45 +359,27 @@ def IsInHour(n, hour, today):
                 return None
         s = EnsureDateTime(n.scheduled.start)
         e = EnsureDateTime(n.scheduled.end)
-        if(IsInHourBracket(s,e,hour)):
+        if IsInHourBracket(s,e,hour):
             return n.scheduled
-    if(n.deadline):
+    if n.deadline:
         s = EnsureDateTime(n.deadline.start)
         e = EnsureDateTime(n.deadline.end)
-        if(IsInHourBracket(s,e,hour)):
+        if IsInHourBracket(s,e,hour):
             return n.deadline
     return None
 
 
 def Overlaps(s,e,rs,re):
-    # s | e |
-    # +---+
-    if(s <= rs and e >= rs and e <= re):
-        return True
-    # | s | e
-    #   +---+
-    if(s >= rs and s < re and e >= re):
-        return True
-    # | s  e |
-    #   +-+
-    if(s >= rs and e <= re):
-        return True
-    # s |    | e
-    # +-------+
-    if(s <= rs and e >= re):
-        return True
-    return False
+    return not (s >= re or e <= rs)
 
 def IsInHourAndMinuteBracket(s,e,hour,mstart,mend):
-    if(not e):
+    if not e:
         # TODO Make this configurable
         e = s + datetime.timedelta(minutes=30)
 
     # Either this task is a ranged task OR it is a single point task
     # Ranged tasks have to fit within the hour, point tasks have to
-    if( Overlaps(s.hour*60 + s.minute, e.hour*60 + e.minute, hour*60 + mstart, hour*60 + mend)):
-        return True
-    return False
+    return Overlaps(s.hour*60 + s.minute, e.hour*60 + e.minute, hour*60 + mstart, hour*60 + mend)
 
 def IsInHourAndMinute(n, hour, mstart, mend, today):
     if(not n):
@@ -1249,7 +1231,7 @@ class AgendaView(AgendaBaseView):
 
     def GetAgendaBlocks(self,n,h):
         out = ""
-        if(n != None):
+        if n:
             symIdx = self.GetUnusedSymbol(0)
             self.ClearAgendaBlocks(h)
             myIdx = self.UpdateWithThisBlock(n, h)
@@ -1258,12 +1240,12 @@ class AgendaView(AgendaBaseView):
             self.ClearAgendaBlocks(h)
         spaceSym = "."
         for i in range(0, len(self.blocks)):
-            if(self.blocks[i]):
+            if self.blocks[i]:
                 spaceSym = " "
-        if(spaceSym == "."):
+        if spaceSym == ".":
             out = ".."
         for i in range(0, len(self.blocks)):
-            if(not self.blocks[i]):
+            if not self.blocks[i]:
                 out = out + spaceSym
             else:
                 symIdx = self.FindSymbol(i)
