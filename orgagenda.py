@@ -308,7 +308,7 @@ def IsAllDay(n, today):
             if dt.hour == 0 and dt.minute == 0 and dt.second == 0 and dt.microsecond == 0:
                 return n.scheduled
         else:
-            if (not n.scheduled.has_end() and not n.scheduled.has_time()) or n.scheduled.after(today):
+            if (not n.scheduled.has_end() and not n.scheduled.has_time()) or n.scheduled.before(today):
                 return n.scheduled
     if n.deadline:
         dt = display_deadline_start(n.deadline)
@@ -1289,7 +1289,7 @@ class AgendaView(AgendaBaseView):
         for entry in self.entries:
             n = entry['node']
             filename = entry['file'].AgendaFilenameTag()
-            ts = IsAllDay(n, self.selected_date)
+            ts = IsAllDay(n, self.selected_date.date())
             if ts:
                 entry['found'] = 'f'
                 self.MarkEntryAt(entry, ts)

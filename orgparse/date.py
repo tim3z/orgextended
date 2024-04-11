@@ -527,32 +527,21 @@ class OrgDate(object):
     def after(self, date): 
         if not isinstance(date, (datetime.datetime, datetime.date)):
             return False
-        asdt = self._as_datetime
-        if asdt(self.start) <= asdt(date):
-            return True
-        return False
+        if isinstance(date, datetime.datetime) and isinstance(self.start, datetime.datetime):
+            return self.start > date
+        return _as_date(self.start) > _as_date(date)
 
     def before(self, date): 
         if not isinstance(date, (datetime.datetime, datetime.date)):
             return False
-        asdt = self._as_datetime
-        if asdt(self.start) >= asdt(date):
-            return True
-        return False
+        if isinstance(date, datetime.datetime) and isinstance(self.start, datetime.datetime):
+            return self.start < date
+        return _as_date(self.start) < _as_date(date)
 
     def _datetime_in_range(self, date):
         if not isinstance(date, (datetime.datetime, datetime.date)):
             return False
-        asdt = self._as_datetime
-        if asdt(self.start) <= asdt(date) <= asdt(self.end):
-            return True
-        return False
-
-    @staticmethod
-    def _as_datetime(date):
-        if isinstance(date, datetime.date):
-            return datetime.datetime(*date.timetuple()[:3])
-        return date
+        return _as_datetime(self.start) <= _as_datetime(date) <= _as_datetime(self.end)
 
     @staticmethod
     def _daterange_from_groupdict(dct, prefix=''):
@@ -699,6 +688,15 @@ class OrgDate(object):
 
     _from_str_re = TIMESTAMP_NOBRACE_RE
 
+def _as_date(date_or_datetime):
+    if isinstance(date_or_datetime, datetime.datetime):
+        return date_or_datetime.date()
+    return date_or_datetime
+
+def _as_datetime(date_or_datetime):
+    if isinstance(date_or_datetime, datetime.datetime):
+        return date_or_datetime
+    return datetime.datetime(*date_or_datetime.timetuple()[:3])
 
 def compile_sdc_re(sdctype):
     brtype = 'inactive' if sdctype == 'CLOSED' else 'active'
