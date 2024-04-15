@@ -534,14 +534,15 @@ class OrgDate(object):
     def before(self, date): 
         if not isinstance(date, (datetime.datetime, datetime.date)):
             return False
-        if isinstance(date, datetime.datetime) and isinstance(self.start, datetime.datetime):
-            return self.start < date
-        return _as_date(self.start) < _as_date(date)
+        self_date = self._end if self.has_end() else self._start
+        if isinstance(date, datetime.datetime) and isinstance(self_date, datetime.datetime):
+            return self_date < date
+        return _as_date(self_date) < _as_date(date)
 
     def _datetime_in_range(self, date):
         if not isinstance(date, (datetime.datetime, datetime.date)):
             return False
-        return _as_datetime(self.start) <= _as_datetime(date) <= _as_datetime(self.end)
+        return not self.before(date) and not self.after(date)
 
     @staticmethod
     def _daterange_from_groupdict(dct, prefix=''):

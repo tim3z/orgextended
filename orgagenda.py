@@ -243,37 +243,39 @@ def IsInMonth(n, now):
     return (None,None)
 
 def IsOnDate(n, date):
-    today = datetime.datetime.now()
+    if isinstance(date, datetime.datetime):
+        date = date.date()
+    today = datetime.date.today()
     # 4 months of per day scheduling is the maximum
     # we are willing to loop to avoid crazy slow loops.
     kMaxLoops = sets.GetInt("agendaMaxScheduledIterations", 120)
     timestamps = n.get_timestamps(active=True,point=True,range=True)
     for t in timestamps:
         if t.repeating:
-            if(DatesEqual(t.start, date)):
+            if DatesEqual(t.start, date):
                 return t
             next = EnsureDateTime(t.start)
             loopcount = 0
-            while(next <= EnsureDateTime(date) and loopcount <= kMaxLoops):
+            while next <= EnsureDateTime(date) and loopcount <= kMaxLoops:
                 if DatesEqual(next, date):
                     return next
                 next = t.next_repeat_from(next)
                 loopcount += 1
         else:
-            if(t.has_overlap(date)):
+            if t.has_overlap(date):
                 return t
     if n.scheduled:
         if n.scheduled.repeating:
             next = n.scheduled.start
             loopcount = 0
-            while(EnsureDateTime(next) <= EnsureDateTime(date) and loopcount <= kMaxLoops):
+            while EnsureDateTime(next) <= EnsureDateTime(date) and loopcount <= kMaxLoops:
                 if DatesEqual(next, date):
                     return next
                 next = n.scheduled.next_repeat_from(EnsureDateTime(next))
                 loopcount += 1
         else:
             schedule_start = EnsureDateTime(n.scheduled.start)
-            if DatesEqual(date, schedule_start) or (schedule_start < today and DatesEqual(date, today)):
+            if DatesEqual(date, schedule_start) or (schedule_start.date() < today and DatesEqual(date, today)):
                 return today
     if n.deadline:
         start = EnsureDateTime(display_deadline_start(n.deadline))
