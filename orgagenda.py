@@ -1145,7 +1145,85 @@ class WeekView(AgendaBaseView):
 
 
 # ============================================================
-class AgendaView(AgendaBaseView):
+class AgendaDayView(AgendaBaseView):
+    def __init__(self, name, setup=True, compact=True, **kwargs):
+        super(AgendaDayView, self).__init__(name, setup, **kwargs)
+        self.compact = compact
+
+    def RenderDateHeading(self, edit, now):
+        headerFormat = sets.Get("agendaHeaderFormat","%A \t%d %B %Y")
+        self.view.insert(edit, self.view.size(), now.strftime(headerFormat) + "\n\n")
+
+    def BuildAgendaEntry(self, filename, n, h, ts):
+        start_minute = ts.minute if IsRawDate(ts) else ts.start.minute
+        start = "{0:02d}:{1:02d}".format(h, start_minute)
+        end = " -----"
+        if not IsRawDate(ts) and ts.end:
+            end = "-{0:02d}:{1:02d}".format(ts.end.hour, ts.end.minute)
+        heading = n.todo + " " + n.heading if n.todo else n.heading
+        file = truncate_date_from_filename(filename)
+        return "{file:12} {start}{end} {heading:32} {deadline}".format(file=file[:12], start=start, end=end, heading=heading[:32], deadline=self.BuildDeadlineDisplay(n))
+
+    def RenderAgendaAllDayEntry(self, edit, filename, n):
+        heading = n.todo + " " + n.heading if n.todo else n.heading
+        file = truncate_date_from_filename(filename)
+        entry = "{file:12}             {heading:48} {deadline}\n".format(file=file[:12], heading=heading[:48], deadline=self.BuildDeadlineDisplay(n))
+        self.view.insert(edit, self.view.size(), entry)
+
+    def BuildDeadlineDisplay(self, node):
+        if node.deadline:
+            if(EnsureDateTime(display_deadline_start(node.deadline)) <= self.selected_date):
+                if(EnsureDateTime(node.deadline.start).date() < self.selected_date.date()):
+                    return "D: Overdue"
+                elif(EnsureDateTime(node.deadline.start).date() == self.selected_date.date()):
+                    return "D: Due Today"
+                else:
+                    return "D:@" + str(EnsureDateTime(node.deadline.start).date())
+        return ""
+
+    def RenderView(self, edit, clear=False):
+        self.InsertAgendaHeading(edit)
+        self.RenderDateHeading(edit, self.selected_date)
+        view = self.view
+        dayStart = sets.Get("agendaDayStartTime",6)
+        dayEnd   = sets.Get("agendaDayEndTime",19)
+        now = datetime.datetime.now()
+        for entry in self.entries:
+            n = entry['node']
+            filename = entry['file'].AgendaFilenameTag()
+            ts = IsAllDay(n, self.selected_date.date())
+            if ts:
+                entry['found'] = True
+                self.MarkEntryAt(entry, ts)
+                self.RenderAgendaAllDayEntry(edit, filename, n)
+
+        lines = []
+        if self.selected_date.date() == now.date():
+            lines.append((now.time(), "{0:12} {1:02d}:{2:02d} - - - - - - - - - - - - - - - - - - - - -".format("now =>", now.hour, now.minute)))
+        if not self.compact:
+            for h in range(dayStart, dayEnd):
+                lines.append((datetime.time(h), "{0:12} {1:02d}:00...... --------------------".format("", h)))
+        for entry in self.entries:
+            n = entry['node']
+            filename = entry['file'].AgendaFilenameTag()
+            if not 'found' in entry:
+                entry['found'] = True
+                for h in range(0, 24):
+                    ts = IsInHour(n, h, self.selected_date)
+                    if ts:
+                        self.MarkEntryAt(entry, ts)
+                        line = self.BuildAgendaEntry(filename, n, h, ts)
+                        lines.append((ts.start.time(), line))
+                        break
+
+        view.insert(edit, view.size(), "\n".join([l for (_t, l) in sorted(lines)]))
+        view.insert(edit, view.size(), "\n\n")
+
+    def FilterEntry(self, node, file):
+        return (not self.onlyTasks or IsTodo(node)) and not IsDone(node) and not IsArchived(node) and IsOnDate(node, self.selected_date)
+
+# ============================================================
+class AgendaView(AgendaDayView):
     def __init__(self, name, setup=True, **kwargs):
         super(AgendaView, self).__init__(name, setup, **kwargs)
         self.blocks = [None,None,None,None,None,None,None]
@@ -1256,28 +1334,17 @@ class AgendaView(AgendaBaseView):
 
     def RenderAgendaEntry(self,edit,filename,n,h,ts):
         start_minute = ts.minute if IsRawDate(ts) else ts.start.minute
+        start = "{0:02d}:{1:02d}".format(h, start_minute)
         heading = n.todo + " " + n.heading if n.todo else n.heading
         file = truncate_date_from_filename(filename)
-        entry = "{0:12} {1:02d}:{2:02d}B[{6}] {3:32} {4}{5}\n".format(file[:12], h, start_minute, heading[:32], self.BuildDeadlineDisplay(n), self.BuildHabitDisplay(n), self.GetAgendaBlocks(n,h))
+        entry = "{file:12} {start}B[{blocks}] {heading:32} {deadline}{habits}\n".format(file=file[:12], start=start, heading=heading[:32], deadline=self.BuildDeadlineDisplay(n), habits=self.BuildHabitDisplay(n), blocks=self.GetAgendaBlocks(n,h))
         self.view.insert(edit, self.view.size(), entry)
 
     def RenderAgendaAllDayEntry(self, edit, filename, n):
         heading = n.todo + " " + n.heading if n.todo else n.heading
         file = truncate_date_from_filename(filename)
-        entry = "{0:12}                 {1:48} {2} {3}\n".format(file, heading[:48], self.BuildDeadlineDisplay(n), self.BuildHabitDisplay(n))
+        entry = "{file:12}                 {heading:48} {deadline}{habits}\n".format(file=file[:12], heading=heading[:48], deadline=self.BuildDeadlineDisplay(n), habits=self.BuildHabitDisplay(n))
         self.view.insert(edit, self.view.size(), entry)
-
-    def BuildDeadlineDisplay(self, node):
-        if node.deadline:
-            if(EnsureDateTime(display_deadline_start(node.deadline)) <= self.selected_date):
-                if(EnsureDateTime(node.deadline.start).date() < self.selected_date.date()):
-                    return "D: Overdue"
-                elif(EnsureDateTime(node.deadline.start).date() == self.selected_date.date()):
-                    return "D: Due Today"
-                else:
-                    return "D:@" + str(EnsureDateTime(node.deadline.start).date())
-        return ""
-
 
     def RenderView(self, edit, clear=False):
         self.InsertAgendaHeading(edit)
@@ -1353,9 +1420,6 @@ class AgendaView(AgendaBaseView):
                     esep = "] "
                 view.insert(edit, view.size(), "{0:12} {1:02d}:00{3}{2}{4}--------------------\n".format(empty, h, blocks, sep, esep))
         view.insert(edit,view.size(),"\n")
-
-    def FilterEntry(self, node, file):
-        return (not self.onlyTasks or IsTodo(node)) and not IsDone(node) and not IsArchived(node) and IsOnDate(node, self.selected_date)
 
 RE_IN_OUT_TAG = re.compile('(?P<inout>[|+-])?(?P<tag>[^ ]+)')
 # ================================================================================

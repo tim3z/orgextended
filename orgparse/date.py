@@ -507,8 +507,7 @@ class OrgDate(object):
         if not isinstance(other, OrgDate):
             other = OrgDate(other)
         if self.has_end():
-            return (self._datetime_in_range(other.start) or
-                    self._datetime_in_range(other.end))
+            return self._datetime_in_range(other.start) or self._datetime_in_range(other.end)
         elif other.has_end():
             return other._datetime_in_range(self.start)
         else:
