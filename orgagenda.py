@@ -780,8 +780,8 @@ class AgendaBaseView:
         else:
             self.view.insert(edit, self.view.size(), self.name + "\n")
 
-    def InitializeSelectedDate(self):
-        self.selected_date = datetime.datetime.now()
+    def InitializeSelectedDate(self, selected=None):
+        self.selected_date = selected or datetime.datetime.now()
 
     def UpdateSelectedDate(self, date):
         self.selected_date = date
@@ -1140,15 +1140,12 @@ class WeekView(AgendaBaseView):
             self.InsertDay(dayNames[index], wstart + datetime.timedelta(days=i), edit)
 
     def FilterEntry(self, n, filename):
-        rc = (not self.onlyTasks or (IsTodo(node) or IsDone(n))) and not IsProject(n) and HasTimestamp(n)
-        return rc
-
+        return (not self.onlyTasks or (IsTodo(node) or IsDone(n))) and not IsProject(n) and HasTimestamp(n)
 
 # ============================================================
 class AgendaDayView(AgendaBaseView):
-    def __init__(self, name, setup=True, compact=True, **kwargs):
+    def __init__(self, name, setup=True, **kwargs):
         super(AgendaDayView, self).__init__(name, setup, **kwargs)
-        self.compact = compact
 
     def RenderDateHeading(self, edit, now):
         headerFormat = sets.Get("agendaHeaderFormat","%A \t%d %B %Y")
@@ -1188,6 +1185,7 @@ class AgendaDayView(AgendaBaseView):
         dayStart = sets.Get("agendaDayStartTime",6)
         dayEnd   = sets.Get("agendaDayEndTime",19)
         now = datetime.datetime.now()
+        any_remaining = False
         for entry in self.entries:
             n = entry['node']
             filename = entry['file'].AgendaFilenameTag()
@@ -1196,13 +1194,15 @@ class AgendaDayView(AgendaBaseView):
                 entry['found'] = True
                 self.MarkEntryAt(entry, ts)
                 self.RenderAgendaAllDayEntry(edit, filename, n)
+            else:
+                any_remaining = True
 
         lines = []
         if self.selected_date.date() == now.date():
             lines.append((now.time(), "{0:12} {1:02d}:{2:02d} - - - - - - - - - - - - - - - - - - - - -".format("now =>", now.hour, now.minute)))
-        if not self.compact:
-            for h in range(dayStart, dayEnd):
-                lines.append((datetime.time(h), "{0:12} {1:02d}:00...... --------------------".format("", h)))
+            if any_remaining:
+                for h in range(dayStart, dayEnd):
+                    lines.append((datetime.time(h), "{0:12} {1:02d}:00...... --------------------".format("", h)))
         for entry in self.entries:
             n = entry['node']
             filename = entry['file'].AgendaFilenameTag()
@@ -1424,12 +1424,12 @@ class AgendaView(AgendaDayView):
 RE_IN_OUT_TAG = re.compile('(?P<inout>[|+-])?(?P<tag>[^ ]+)')
 # ================================================================================
 class TodoView(AgendaBaseView):
-
     def GetParam(self, name, defaultVal, kwargs):
         v       = kwargs[name] if name in kwargs else None
         if isinstance(v,bool):
             v = ">10.10"
         return v
+
     def __init__(self, name, setup=True, **kwargs):
         super(TodoView, self).__init__(name, setup, **kwargs)
         self.showduration = self.GetParam("showduration","7.7",kwargs)
@@ -1873,10 +1873,10 @@ class CompositeView(AgendaBaseView):
         for v in self.agendaViews:
             self.entries += v.entries
 
-    def InitializeSelectedDate(self):
-        AgendaBaseView.InitializeSelectedDate(self)
+    def InitializeSelectedDate(self, selected=None):
+        AgendaBaseView.InitializeSelectedDate(self, selected)
         for v in self.agendaViews:
-            v.InitializeSelectedDate()
+            v.InitializeSelectedDate(selected)
 
     def UpdateSelectedDate(self, date):
         self.selected_date = date
@@ -1894,6 +1894,53 @@ class CompositeView(AgendaBaseView):
         for av in self.agendaViews:
             n, f  = av.At(row,col)
             if(n and f):
+                return (n,f)
+        return (None, None)
+
+class AgendaWeekView(AgendaBaseView):
+    def __init__(self, name, setup=True, **kwargs):
+        self.day_views = [
+            AgendaDayView("Monday", setup=False, **kwargs),
+            AgendaDayView("Tuesday", setup=False, **kwargs),
+            AgendaDayView("Wednesday", setup=False, **kwargs),
+            AgendaDayView("Thursday", setup=False, **kwargs),
+            AgendaDayView("Friday", setup=False, **kwargs),
+            AgendaDayView("Saturday", setup=False, **kwargs),
+            AgendaDayView("Sunday", setup=False, **kwargs),
+        ]
+        super(AgendaWeekView, self).__init__(name, setup, **kwargs)
+        if setup:
+            self.SetupView()
+
+    def RenderView(self, edit, clear=False):
+        for v in self.day_views:
+            v.view = self.view
+            v.RenderView(edit, clear)
+        self.entries = []
+        for v in self.day_views:
+            self.entries += v.entries
+
+    def InitializeSelectedDate(self, selected=None):
+        AgendaBaseView.InitializeSelectedDate(self, selected)
+        for (idx, v) in enumerate(self.day_views):
+            v.InitializeSelectedDate(self.selected_date + datetime.timedelta(days=idx - self.selected_date.weekday()))
+
+    def UpdateSelectedDate(self, date):
+        self.selected_date = date
+        for (idx, v) in enumerate(self.day_views):
+            v.UpdateSelectedDate(self.selected_date + datetime.timedelta(days=idx - self.selected_date.weekday()))
+
+    def FilterEntries(self):
+        self.entries = []
+        for v in self.day_views:
+            v.entries = []
+            v.FilterEntries()
+            self.entries += v.entries
+
+    def At(self, row, col):
+        for av in self.day_views:
+            n, f  = av.At(row,col)
+            if n and f:
                 return (n,f)
         return (None, None)
 
@@ -1995,6 +2042,8 @@ class CalendarViewRegistry:
         self.KnownViews = {}
         self.AddView("Calendar", CalendarView)
         self.AddView("Day", AgendaView)
+        self.AddView("Day Agenda", AgendaDayView)
+        self.AddView("Week Agenda", AgendaWeekView)
         self.AddView("Blocked Projects", BlockedProjectsView)
         self.AddView("Next Tasks", NextTasksProjectsView)
         self.AddView("Loose Tasks", LooseTasksView)
