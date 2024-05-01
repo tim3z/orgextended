@@ -757,7 +757,7 @@ class AgendaBaseView:
         self.view.set_scratch(True)
         self.view.set_name(self.name)
         self.BasicSetup()
-        self.FilterEntries()
+        self.LoadAndFilterEntries()
         # Keep ourselves attached to this agenda
         # This doesn't work BOO
         self.view.agenda = self
@@ -786,7 +786,6 @@ class AgendaBaseView:
     def UpdateSelectedDate(self, date):
         self.selected_date = date
         self.entries = []
-        self.FilterEntries()
 
     # You have to bookend your editing session with these
     def StartEditing(self):
@@ -799,10 +798,6 @@ class AgendaBaseView:
         # Restore the cursor
         self.view.sel().clear()
         self.view.sel().add(pos)
-
-    def AddEntry(self, node, file):
-        self.entries.append({"node": node, "file": file})
-
 
     def ClearEntriesAt(self):
         for e in self.entries:
@@ -843,28 +838,34 @@ class AgendaBaseView:
     def RenderView(self, edit, clear=False):
         pass
 
-    def FilterEntries(self):
+    def generate_entries(self):
         allowOutsideOrgDir = sets.Get("agendaIncludeFilesOutsideOrgDir", False)
         for file in db.Get().Files:
             # Skip over files not in orgDir
-            if(not file.isOrgDir and not allowOutsideOrgDir):
+            if not file.isOrgDir and not allowOutsideOrgDir:
                 continue
-            #if(not "habits" in file.filename):
-            #    continue
-            #print("AGENDA: " + file.filename + " " + file.key)
             for n in file.org[1:]:
-                if(self.MatchHas(n)
-                   and self.MatchPriorities(n)
-                   and self.MatchTags(n)
-                   and self.MatchState(n)
-                   and self.MatchDuration(n)
-                   and self.MatchDate(n)
-                   and self.MatchClock(n)
-                   and self.FilterEntry(n, file)):
-                    self.AddEntry(n, file)
+                yield { "node": n, "file": file }
+
+    def set_entries_filtered(self, entries):
+        self.entries = [
+            e for e in entries if (
+                    self.MatchHas(e['node'])
+                    and self.MatchPriorities(e['node'])
+                    and self.MatchTags(e['node'])
+                    and self.MatchState(e['node'])
+                    and self.MatchDuration(e['node'])
+                    and self.MatchDate(e['node'])
+                    and self.MatchClock(e['node'])
+                    and self.FilterEntry(e['node'], e['file'])
+                )
+        ]
+
+    def LoadAndFilterEntries(self):
+        self.set_entries_filtered(self.generate_entries())
 
     def FilterEntry(self, node, file):
-        pass
+        return True
 
 def IsBeforeNow(ts, now):
     if(isinstance(ts,orgdate.OrgDate)):
@@ -1883,12 +1884,10 @@ class CompositeView(AgendaBaseView):
         for v in self.agendaViews:
             v.UpdateSelectedDate(date)
 
-    def FilterEntries(self):
-        self.entries = []
+    def LoadAndFilterEntries(self):
+        AgendaBaseView.LoadAndFilterEntries(self)
         for v in self.agendaViews:
-            v.entries = []
-            v.FilterEntries()
-            self.entries += v.entries
+            v.set_entries_filtered(self.entries)
 
     def At(self, row, col):
         for av in self.agendaViews:
@@ -1931,12 +1930,15 @@ class AgendaWeekView(AgendaBaseView):
         for (idx, v) in enumerate(self.day_views):
             v.UpdateSelectedDate(self.selected_date + datetime.timedelta(days=idx - self.selected_date.weekday()))
 
-    def FilterEntries(self):
-        self.entries = []
+    def LoadAndFilterEntries(self):
+        AgendaBaseView.LoadAndFilterEntries(self)
         for v in self.day_views:
-            v.entries = []
-            v.FilterEntries()
-            self.entries += v.entries
+            v.set_entries_filtered(self.entries)
+
+    def set_entries_filtered(self, entries):
+        AgendaBaseView.set_entries_filtered(self, entries)
+        for v in self.day_views:
+            v.set_entries_filtered(self.entries)
 
     def At(self, row, col):
         for av in self.day_views:
@@ -1944,6 +1946,9 @@ class AgendaWeekView(AgendaBaseView):
             if n and f:
                 return (n,f)
         return (None, None)
+
+    def FilterEntry(self, node, file):
+        return (not self.onlyTasks or IsTodo(node)) and not IsDone(node) and not IsArchived(node) and HasTimestamp(node)
 
 # ================================================================================
 class OrgTodoViewCommand(sublime_plugin.TextCommand):
@@ -2278,6 +2283,7 @@ class OrgAgendaGotoNextDayCommand(sublime_plugin.TextCommand):
         date = agenda.selected_date
         date = date + datetime.timedelta(days=1)
         agenda.UpdateSelectedDate(date)
+        agenda.LoadAndFilterEntries()
         agenda.Clear(edit)
         agenda.DoRenderView(edit)
 
@@ -2288,6 +2294,7 @@ class OrgAgendaGotoPrevDayCommand(sublime_plugin.TextCommand):
         date = agenda.selected_date
         date = date + datetime.timedelta(days=-1)
         agenda.UpdateSelectedDate(date)
+        agenda.LoadAndFilterEntries()
         agenda.Clear(edit)
         agenda.DoRenderView(edit)
 
@@ -2296,5 +2303,6 @@ class OrgAgendaRefreshCommand(sublime_plugin.TextCommand):
         agenda = FindMappedView(self.view)
         date = agenda.selected_date
         agenda.UpdateSelectedDate(date)
+        agenda.LoadAndFilterEntries()
         agenda.Clear(edit)
         agenda.DoRenderView(edit)
