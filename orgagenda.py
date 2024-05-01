@@ -1144,12 +1144,13 @@ class WeekView(AgendaBaseView):
 
 # ============================================================
 class AgendaDayView(AgendaBaseView):
-    def __init__(self, name, setup=True, **kwargs):
+    def __init__(self, name, setup=True, skip_heading=False, **kwargs):
+        self.skip_heading = skip_heading
         super(AgendaDayView, self).__init__(name, setup, **kwargs)
 
     def RenderDateHeading(self, edit, now):
         headerFormat = sets.Get("agendaHeaderFormat","%A \t%d %B %Y")
-        self.view.insert(edit, self.view.size(), now.strftime(headerFormat) + "\n\n")
+        self.view.insert(edit, self.view.size(), now.strftime(headerFormat) + "\n")
 
     def BuildAgendaEntry(self, filename, n, h, ts):
         start_minute = ts.minute if IsRawDate(ts) else ts.start.minute
@@ -1179,7 +1180,8 @@ class AgendaDayView(AgendaBaseView):
         return ""
 
     def RenderView(self, edit, clear=False):
-        self.InsertAgendaHeading(edit)
+        if not self.skip_heading:
+            self.InsertAgendaHeading(edit)
         self.RenderDateHeading(edit, self.selected_date)
         view = self.view
         dayStart = sets.Get("agendaDayStartTime",6)
@@ -1216,8 +1218,7 @@ class AgendaDayView(AgendaBaseView):
                         lines.append((ts.start.time(), line))
                         break
 
-        view.insert(edit, view.size(), "\n".join([l for (_t, l) in sorted(lines)]))
-        view.insert(edit, view.size(), "\n\n")
+        view.insert(edit, view.size(), "".join([l + "\n" for (_t, l) in sorted(lines)]))
 
     def FilterEntry(self, node, file):
         return (not self.onlyTasks or IsTodo(node)) and not IsDone(node) and not IsArchived(node) and IsOnDate(node, self.selected_date)
@@ -1232,7 +1233,7 @@ class AgendaView(AgendaDayView):
 
     def RenderDateHeading(self, edit, now):
         headerFormat = sets.Get("agendaHeaderFormat","%A \t%d %B %Y")
-        self.view.insert(edit, self.view.size(), now.strftime(headerFormat) + "\n\n")
+        self.view.insert(edit, self.view.size(), now.strftime(headerFormat) + "\n")
 
     def BuildHabitDisplay(self, n):
         if(n.scheduled and n.get_property("STYLE",None)):
@@ -1782,7 +1783,6 @@ class MeetingView(TodoView):
 
 # ================================================================================
 class CompositeViewListener(sublime_plugin.ViewEventListener):
-
     @classmethod
     def is_applicable(cls, settings):
         # 4095 seems to crash when querying settings
@@ -1900,19 +1900,20 @@ class CompositeView(AgendaBaseView):
 class AgendaWeekView(AgendaBaseView):
     def __init__(self, name, setup=True, **kwargs):
         self.day_views = [
-            AgendaDayView("Monday", setup=False, **kwargs),
-            AgendaDayView("Tuesday", setup=False, **kwargs),
-            AgendaDayView("Wednesday", setup=False, **kwargs),
-            AgendaDayView("Thursday", setup=False, **kwargs),
-            AgendaDayView("Friday", setup=False, **kwargs),
-            AgendaDayView("Saturday", setup=False, **kwargs),
-            AgendaDayView("Sunday", setup=False, **kwargs),
+            AgendaDayView("Monday", setup=False, skip_heading=True, **kwargs),
+            AgendaDayView("Tuesday", setup=False, skip_heading=True, **kwargs),
+            AgendaDayView("Wednesday", setup=False, skip_heading=True, **kwargs),
+            AgendaDayView("Thursday", setup=False, skip_heading=True, **kwargs),
+            AgendaDayView("Friday", setup=False, skip_heading=True, **kwargs),
+            AgendaDayView("Saturday", setup=False, skip_heading=True, **kwargs),
+            AgendaDayView("Sunday", setup=False, skip_heading=True, **kwargs),
         ]
         super(AgendaWeekView, self).__init__(name, setup, **kwargs)
         if setup:
             self.SetupView()
 
     def RenderView(self, edit, clear=False):
+        self.InsertAgendaHeading(edit)
         for v in self.day_views:
             v.view = self.view
             v.RenderView(edit, clear)
